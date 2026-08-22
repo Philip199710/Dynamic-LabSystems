@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Analytics · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Data analysis</h1>
+    <p class="subtitle">Trend and control charts by test method.</p>
+  </div>
+</div>
+<div class="card">
+  <table>
+    <tr><th>Test method</th><th>Standard</th><th>Results on file</th><th></th></tr>
+    {% for m in methods %}
+    <tr>
+      <td>{{ m.name }}</td>
+      <td class="muted">{{ m.standard_reference }}</td>
+      <td>{{ m.result_count }}</td>
+      <td>{% if m.result_count %}<a href="{% url 'dashboard:analytics_trend' m.pk %}" class="btn small">View trend</a>{% else %}<span class="muted">No data yet</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

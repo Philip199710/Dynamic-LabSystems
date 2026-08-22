@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ sample.sample_id }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ sample.sample_id }} <span class="badge {{ sample.status|lower }}">{{ sample.get_status_display }}</span></h1>
+    <p class="subtitle">{{ sample.fuel_type.name }} &middot; from {{ sample.source }} &middot; received {{ sample.date_received }}</p>
+  </div>
+  <div style="display:flex;gap:.5rem;">
+    {% if sample.status == "COMPLETE" %}
+    <a href="{% url 'reports:coa_pdf' sample.pk %}" class="btn">Download COA (PDF)</a>
+    {% endif %}
+    {% if sample.status != "DISPOSED" %}
+    <form method="post" action="{% url 'samples:dispose' sample.pk %}" onsubmit="return confirm('Mark this sample as disposed?');">
+      {% csrf_token %}
+      <button type="submit" class="btn secondary">Mark disposed</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="section-title">Sample details</div>
+    <table class="compact">
+      <tr><td class="muted">Storage location</td><td>{{ sample.storage_location|default:"—" }}</td></tr>
+      <tr><td class="muted">Received by</td><td>{{ sample.received_by.get_username|default:"—" }}</td></tr>
+      <tr><td class="muted">Notes</td><td>{{ sample.notes|default:"—" }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Assign a test</div>
+    {% if available_methods %}
+    <form method="post" action="{% url 'labtests:assign' sample.pk %}">
+      {% csrf_token %}
+      {% for field in assign_form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn">Assign test</button>
+    </form>
+    {% else %}
+    <p class="empty">All active test methods are already assigned to this sample.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Tests &amp; results</div>
+  {% if tests %}
+  <table>
+    <tr><th>Test</th><th>Standard</th><th>Assigned to</th><th>Due</th><th>Status</th><th>Result</th><th></th></tr>
+    {% for t in tests %}
+    <tr>
+      <td>{{ t.test_method.name }}</td>
+      <td class="muted">{{ t.test_method.standard_reference }}</td>
+      <td>{{ t.assigned_to.get_username|default:"Unassigned" }}</td>
+      <td{% if t.overdue %} style="color:#c62a21;font-weight:600;"{% endif %}>{{ t.due_date|default:"—" }}</td>
+      <td><span class="badge {{ t.status|lower }}">{{ t.get_status_display }}</span></td>
+      <td>
+        {% if t.result %}
+          {{ t.result.value }} {{ t.test_method.unit }}
+          {% if t.result.pass_fail == True %}<span class="badge pass">PASS</span>
+          {% elif t.result.pass_fail == False %}<span class="badge fail">OUT OF SPEC</span>
+          {% else %}<span class="badge unknown">no spec</span>{% endif %}
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td><a href="{% url 'labtests:enter_result' t.pk %}" class="btn small secondary">{% if t.result %}Edit result{% else %}Enter result{% endif %}</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No tests assigned yet.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="section-title">Chain of custody</div>
+  {% if custody_log %}
+  <table class="compact">
+    <tr><th>When</th><th>Action</th><th>By</th><th>Notes</th></tr>
+    {% for entry in custody_log %}
+    <tr>
+      <td class="muted" style="white-space:nowrap;">{{ entry.timestamp|date:"M j, Y H:i" }}</td>
+      <td>{{ entry.action }}</td>
+      <td>{{ entry.actor.get_username|default:"system" }}</td>
+      <td class="muted">{{ entry.notes|default:"" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No custody entries yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

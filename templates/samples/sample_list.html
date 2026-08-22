@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Samples · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Samples</h1>
+    <p class="subtitle">{{ samples|length }} sample{{ samples|length|pluralize }}{% if current_status %} &middot; filtered{% endif %}</p>
+  </div>
+  <a href="{% url 'samples:create' %}" class="btn">+ Register sample</a>
+</div>
+
+<div class="filters">
+  <a href="{% url 'samples:list' %}" class="{% if not current_status %}active{% endif %}">All</a>
+  {% for key, label in status_choices %}
+  <a href="?status={{ key }}" class="{% if current_status == key %}active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  {% if samples %}
+  <table>
+    <tr><th>Sample ID</th><th>Fuel type</th><th>Source</th><th>Received</th><th>Status</th><th></th></tr>
+    {% for s in samples %}
+    <tr>
+      <td><a href="{% url 'samples:detail' s.pk %}">{{ s.sample_id }}</a></td>
+      <td>{{ s.fuel_type.name }}</td>
+      <td>{{ s.source }}</td>
+      <td>{{ s.date_received }}</td>
+      <td><span class="badge {{ s.status|lower }}">{{ s.get_status_display }}</span></td>
+      <td><a href="{% url 'samples:detail' s.pk %}" class="btn small secondary">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No samples match this filter.</p>
+  {% endif %}
+</div>
+{% endblock %}

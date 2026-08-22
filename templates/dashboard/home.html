@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Lab activity dashboard</h1>
+    <p class="subtitle">Live snapshot of samples, testing workload, and QC performance.</p>
+  </div>
+  <a href="{% url 'samples:create' %}" class="btn">+ Register sample</a>
+</div>
+
+<div class="grid cols-4">
+  {% for s in status_summary %}
+  <div class="card stat">
+    <div class="n">{{ s.count }}</div>
+    <div class="l">{{ s.label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid cols-3">
+  <div class="card stat">
+    <div class="n">{{ open_tests_count }}</div>
+    <div class="l">Open tests</div>
+  </div>
+  <div class="card stat">
+    <div class="n">{{ overdue_tests|length }}</div>
+    <div class="l">Overdue tests</div>
+  </div>
+  <div class="card stat">
+    <div class="n">{% if avg_turnaround is not None %}{{ avg_turnaround }} d{% else %}—{% endif %}</div>
+    <div class="l">Avg. turnaround (completed)</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="section-title">QC pass / fail</div>
+    {% if total_results %}
+      <p style="margin:0 0 .5rem;"><strong>{{ pass_count }}</strong> pass &middot; <strong>{{ fail_count }}</strong> out of spec &middot; {{ total_results }} results total</p>
+      <div style="background:#eee;border-radius:6px;overflow:hidden;height:10px;display:flex;">
+        <div style="background:#1f9d55;width:{% widthratio pass_count total_results 100 %}%;"></div>
+        <div style="background:#e8352b;width:{% widthratio fail_count total_results 100 %}%;"></div>
+      </div>
+    {% else %}
+      <p class="empty">No results recorded yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Analyst workload (open tests)</div>
+    {% if workload %}
+      <table class="compact">
+        {% for name, count in workload %}
+        <tr><td>{{ name }}</td><td class="text-right">{{ count }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="empty">No open tests assigned.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if overdue_tests %}
+<div class="card">
+  <div class="section-title">Overdue tests</div>
+  <table>
+    <tr><th>Sample</th><th>Test</th><th>Assigned to</th><th>Due</th><th></th></tr>
+    {% for t in overdue_tests %}
+    <tr>
+      <td><a href="{% url 'samples:detail' t.sample_id %}">{{ t.sample.sample_id }}</a></td>
+      <td>{{ t.test_method.name }}</td>
+      <td>{{ t.assigned_to.get_username|default:"Unassigned" }}</td>
+      <td>{{ t.due_date }}</td>
+      <td><a href="{% url 'labtests:enter_result' t.pk %}" class="btn small">Enter result</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if instruments_due %}
+<div class="card">
+  <div class="section-title">Instruments overdue for calibration</div>
+  <table class="compact">
+    <tr><th>Instrument</th><th>Type</th><th>Calibration due</th></tr>
+    {% for i in instruments_due %}
+    <tr><td>{{ i.name }}</td><td>{{ i.instrument_type }}</td><td>{{ i.calibration_due_date }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="section-title">Recent activity</div>
+  {% if recent_activity %}
+    <table class="compact">
+      {% for entry in recent_activity %}
+      <tr>
+        <td class="muted" style="white-space:nowrap;">{{ entry.timestamp|date:"M j, H:i" }}</td>
+        <td><a href="{% url 'samples:detail' entry.sample_id %}">{{ entry.sample.sample_id }}</a></td>
+        <td>{{ entry.action }}</td>
+        <td class="muted">{{ entry.actor.get_username|default:"system" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No activity yet — register a sample to get started.</p>
+  {% endif %}
+</div>
+{% endblock %}

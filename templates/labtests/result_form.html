@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Enter result · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ sample_test.test_method.name }}</h1>
+    <p class="subtitle">{{ sample_test.test_method.standard_reference }} &middot; sample {{ sample_test.sample.sample_id }} ({{ sample_test.sample.fuel_type.name }})</p>
+  </div>
+  <a href="{% url 'samples:detail' sample_test.sample_id %}" class="btn secondary">&larr; Back to sample</a>
+</div>
+
+{% with limit=sample_test.spec_limit %}
+{% if limit %}
+<div class="card">
+  <div class="section-title">Spec limit for {{ sample_test.sample.fuel_type.name }}</div>
+  <p style="margin:0;">{{ limit.range_display }} {{ sample_test.test_method.unit }}</p>
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="card" style="max-width:560px;">
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="field">
+      <label for="{{ field.id_for_label }}">{{ field.label }} {% if field.name == "value" %}({{ sample_test.test_method.unit }}){% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn">Save result</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}My worklist · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header"><h1>My worklist</h1><p class="subtitle">Tests assigned to {{ user.get_username }} that aren't complete yet.</p></div>
+<div class="card">
+  {% if tests %}
+  <table>
+    <tr><th>Sample</th><th>Fuel type</th><th>Test</th><th>Due</th><th>Status</th><th></th></tr>
+    {% for t in tests %}
+    <tr>
+      <td><a href="{% url 'samples:detail' t.sample_id %}">{{ t.sample.sample_id }}</a></td>
+      <td>{{ t.sample.fuel_type.name }}</td>
+      <td>{{ t.test_method.name }}</td>
+      <td{% if t.overdue %} style="color:#c62a21;font-weight:600;"{% endif %}>{{ t.due_date|default:"—" }}</td>
+      <td><span class="badge {{ t.status|lower }}">{{ t.get_status_display }}</span></td>
+      <td><a href="{% url 'labtests:enter_result' t.pk %}" class="btn small">Enter result</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">Nothing on your worklist right now.</p>
+  {% endif %}
+</div>
+{% endblock %}

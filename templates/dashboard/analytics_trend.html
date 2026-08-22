@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ method.name }} trend · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ method.name }}</h1>
+    <p class="subtitle">{{ method.standard_reference }} &middot; unit: {{ method.unit }}</p>
+  </div>
+  <a href="{% url 'dashboard:analytics_index' %}" class="btn secondary">&larr; All methods</a>
+</div>
+
+<div class="grid cols-4">
+  <div class="card stat"><div class="n">{{ points|length }}</div><div class="l">Results</div></div>
+  <div class="card stat"><div class="n">{{ mean|default:"—" }}</div><div class="l">Mean</div></div>
+  <div class="card stat"><div class="n">{{ stdev|default:"—" }}</div><div class="l">Std. dev.</div></div>
+  <div class="card stat"><div class="n">{{ pass_count }} / {{ fail_count }}</div><div class="l">Pass / out of spec</div></div>
+</div>
+
+<div class="card">
+  <div class="section-title">Trend &amp; control chart (mean ± 2σ / 3σ)</div>
+  {% if points %}
+    <canvas id="trendChart" height="90"></canvas>
+  {% else %}
+    <p class="empty">No results recorded for this method yet.</p>
+  {% endif %}
+</div>
+
+{% if fuel_types %}
+<div class="card">
+  <div class="section-title">Spec limits on file</div>
+  <table class="compact">
+    <tr><th>Fuel type</th><th>Min</th><th>Max</th></tr>
+    {% for f in fuel_types %}
+    <tr><td>{{ f.fuel_type.name }}</td><td>{{ f.min_value|default:"—" }}</td><td>{{ f.max_value|default:"—" }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{{ points|json_script:"points-data" }}
+<script>
+  window.CHART_MEAN = {{ mean|default_if_none:"null" }};
+  window.CHART_UCL2 = {{ ucl2|default_if_none:"null" }};
+  window.CHART_LCL2 = {{ lcl2|default_if_none:"null" }};
+  window.CHART_UCL3 = {{ ucl3|default_if_none:"null" }};
+  window.CHART_LCL3 = {{ lcl3|default_if_none:"null" }};
+</script>
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+  var canvas = document.getElementById('trendChart');
+  if (!canvas) return;
+  var points = JSON.parse(document.getElementById('points-data').textContent);
+  var labels = points.map(function (p) { return p.date + ' · ' + p.label; });
+  var values = points.map(function (p) { return p.value; });
+  var pointColors = points.map(function (p) {
+    if (p.pass_fail === false) return '#e8352b';
+    if (p.pass_fail === true) return '#1f9d55';
+    return '#6b6f80';
+  });
+
+  var datasets = [{
+    label: 'Result',
+    data: values,
+    borderColor: '#333750',
+    backgroundColor: '#333750',
+    pointBackgroundColor: pointColors,
+    pointRadius: 4,
+    tension: 0.15,
+  }];
+
+  function flatLine(label, value, color, dash) {
+    if (value === null || value === undefined) return null;
+    return {
+      label: label,
+      data: values.map(function () { return value; }),
+      borderColor: color,
+      borderDash: dash,
+      pointRadius: 0,
+      borderWidth: 1,
+      fill: false,
+    };
+  }
+
+  [
+    flatLine('Mean', window.CHART_MEAN, '#22232e', []),
+    flatLine('+2σ', window.CHART_UCL2, '#b8860b', [6, 4]),
+    flatLine('-2σ', window.CHART_LCL2, '#b8860b', [6, 4]),
+    flatLine('+3σ', window.CHART_UCL3, '#e8352b', [3, 3]),
+    flatLine('-3σ', window.CHART_LCL3, '#e8352b', [3, 3]),
+  ].forEach(function (d) { if (d) datasets.push(d); });
+
+  new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: { x: { ticks: { maxRotation: 60, minRotation: 0 } } },
+    },
+  });
+})();
+</script>
+{% endblock %}
