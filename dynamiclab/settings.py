@@ -131,7 +131,11 @@ if not DEBUG:
 # nothing is silently lost, but nothing is actually emailed either).
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 if EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    # Forces the SMTP connection over IPv4 — this host's network can't route
+    # IPv6, and some mail providers (Gmail included) hand back an IPv6
+    # address first, which otherwise fails the connection outright before
+    # IPv4 is ever tried. See dynamiclab/mail_backend.py.
+    EMAIL_BACKEND = "dynamiclab.mail_backend.EmailBackend"
     EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
