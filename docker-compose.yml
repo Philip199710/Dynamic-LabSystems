@@ -27,6 +27,13 @@ services:
       DJANGO_TIME_ZONE: ${DJANGO_TIME_ZONE:-Asia/Bangkok}
       DATABASE_URL: postgres://dynamiclab:${POSTGRES_PASSWORD:-change-me}@db:5432/dynamiclab
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-0}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-1}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Dynamic LabSystems <no-reply@dynamiclabsystems.example>}
+      SAMPLE_NOTIFICATION_EMAIL: ${SAMPLE_NOTIFICATION_EMAIL:-info@dynamicapac.com}
     volumes:
       - dynamiclab_media:/app/media
     ports:

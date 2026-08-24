@@ -34,5 +34,16 @@
     {% endif %}
     {% block content %}{% endblock %}
   </div>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-brand">
+        <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
+        <span>{{ SITE_NAME }}</span>
+      </div>
+      <p class="site-footer-tag">Internal fuel &amp; petroleum testing LIMS</p>
+      <p class="site-footer-copy">&copy; {% now "Y" %} {{ SITE_NAME }}. All rights reserved.</p>
+    </div>
+  </footer>
 </body>
 </html>

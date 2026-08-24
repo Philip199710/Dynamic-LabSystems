@@ -123,3 +123,26 @@ SITE_NAME = "Dynamic LabSystems"
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Email
+# Sends a notification whenever a new sample is registered (see samples.emails).
+# Set EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD to enable real delivery via
+# SMTP; until those are set, mail is only written to the app logs (safe default —
+# nothing is silently lost, but nothing is actually emailed either).
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+    EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "0") == "1"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Dynamic LabSystems <no-reply@dynamiclabsystems.local>")
+
+# Every newly registered sample is emailed here. Override with SAMPLE_NOTIFICATION_EMAIL
+# if this should go somewhere else, or set it to an empty string to turn the
+# notification off entirely.
+SAMPLE_NOTIFICATION_EMAIL = os.environ.get("SAMPLE_NOTIFICATION_EMAIL", "info@dynamicapac.com")

@@ -16,6 +16,12 @@
       <button type="submit" class="btn secondary">Mark disposed</button>
     </form>
     {% endif %}
+    {% if perms.samples.delete_sample %}
+    <form method="post" action="{% url 'samples:delete' sample.pk %}" onsubmit="return confirm('Permanently delete sample {{ sample.sample_id }}? This removes its tests, results, and chain-of-custody log, and cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn danger">Delete</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 

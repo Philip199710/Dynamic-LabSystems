@@ -19,7 +19,7 @@
 <div class="card">
   {% if samples %}
   <table>
-    <tr><th>Sample ID</th><th>Fuel type</th><th>Source</th><th>Received</th><th>Status</th><th></th></tr>
+    <tr><th>Sample ID</th><th>Fuel type</th><th>Source</th><th>Received</th><th>Status</th><th colspan="{% if perms.samples.delete_sample %}2{% else %}1{% endif %}"></th></tr>
     {% for s in samples %}
     <tr>
       <td><a href="{% url 'samples:detail' s.pk %}">{{ s.sample_id }}</a></td>
@@ -28,6 +28,14 @@
       <td>{{ s.date_received }}</td>
       <td><span class="badge {{ s.status|lower }}">{{ s.get_status_display }}</span></td>
       <td><a href="{% url 'samples:detail' s.pk %}" class="btn small secondary">Open</a></td>
+      {% if perms.samples.delete_sample %}
+      <td>
+        <form method="post" action="{% url 'samples:delete' s.pk %}" onsubmit="return confirm('Permanently delete sample {{ s.sample_id }}? This cannot be undone.');">
+          {% csrf_token %}
+          <button type="submit" class="btn small danger">Delete</button>
+        </form>
+      </td>
+      {% endif %}
     </tr>
     {% endfor %}
   </table>
