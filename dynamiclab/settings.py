@@ -137,6 +137,13 @@ if EMAIL_HOST:
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
     EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
     EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "0") == "1"
+    # Cap how long Django will wait to connect/talk to the SMTP server. Without
+    # this, a wrong host/port can hang the connection attempt indefinitely,
+    # which eventually gets the whole request worker killed by the app server
+    # (a hard kill Python can't catch) instead of raising an error that
+    # samples.emails can catch and swallow. Keeping this well under the app
+    # server's request timeout is what makes a bad mail config fail safely.
+    EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
