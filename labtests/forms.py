@@ -14,9 +14,15 @@ class AssignTestForm(forms.ModelForm):
         self._sample = sample
         if sample is not None:
             existing = sample.tests.values_list("test_method_id", flat=True)
-            self.fields["test_method"].queryset = self.fields["test_method"].queryset.filter(
-                active=True
-            ).exclude(id__in=existing)
+            # Restrict to methods with a spec limit on file for this sample's
+            # fuel type, so e.g. Research Octane Number never shows up as
+            # assignable on a diesel sample.
+            self.fields["test_method"].queryset = (
+                self.fields["test_method"]
+                .queryset.filter(active=True, spec_limits__fuel_type=sample.fuel_type)
+                .exclude(id__in=existing)
+                .distinct()
+            )
 
     def save(self, commit=True):
         instance = super().save(commit=False)

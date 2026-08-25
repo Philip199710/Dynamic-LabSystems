@@ -53,6 +53,15 @@ TEST_METHODS = [
     ("CETANE-D613", "Cetane Number", "ASTM D613", "—"),
     ("RON-D2699", "Research Octane Number", "ASTM D2699", "RON"),
     ("CLOUD-D2500", "Cloud Point", "ASTM D2500", "°C"),
+    # Added for aviation-fuel QC coverage and a manual/reference density
+    # method, plus a sediment/particulate check for blended distillates —
+    # see the ASTM standard references below for scope of each.
+    ("DENS-D1298", "Density at 15°C (Hydrometer)", "ASTM D1298", "kg/m³"),
+    ("SED-D473", "Sediment (Extraction Method)", "ASTM D473", "% mass"),
+    ("FREEZE-D2386", "Freezing Point", "ASTM D2386", "°C"),
+    ("COND-D2624", "Electrical Conductivity", "ASTM D2624", "pS/m"),
+    ("DIST10-D86", "Distillation, 10% Recovered", "ASTM D86", "°C"),
+    ("DISTFBP-D86", "Distillation, Final Boiling Point", "ASTM D86", "°C"),
 ]
 
 # fuel_code -> {test_code: (min, max)}
@@ -62,12 +71,21 @@ SPEC_LIMITS = {
         "DENS-D4052": (720.0, 775.0),
         "SULF-D5453": (None, 10.0),
         "RVP-D5191": (45.0, 60.0),
+        # D1298 is the manual-hydrometer equivalent of D4052 — same
+        # physical property, same acceptance range.
+        "DENS-D1298": (720.0, 775.0),
+        # ASTM D4814 volatility-class-representative limits.
+        "DIST10-D86": (None, 70.0),
+        "DISTFBP-D86": (None, 225.0),
     },
     "GAS91": {
         "RON-D2699": (91.0, None),
         "DENS-D4052": (715.0, 770.0),
         "SULF-D5453": (None, 10.0),
         "RVP-D5191": (45.0, 60.0),
+        "DENS-D1298": (715.0, 770.0),
+        "DIST10-D86": (None, 70.0),
+        "DISTFBP-D86": (None, 225.0),
     },
     "DIESEL": {
         "CETANE-D613": (51.0, None),
@@ -78,12 +96,21 @@ SPEC_LIMITS = {
         "VISC-D445": (2.0, 4.5),
         "WATER-D6304": (None, 200.0),
         "DIST-D86": (None, 360.0),
+        "DENS-D1298": (820.0, 845.0),
+        # Sediment/particulate contamination screen for AGO handling & storage.
+        "SED-D473": (None, 0.01),
     },
     "JETA1": {
         "FLASH-D56": (38.0, None),
         "DENS-D4052": (775.0, 840.0),
         "SULF-D5453": (None, 3000.0),
         "VISC-D445": (None, 8.0),
+        "DENS-D1298": (775.0, 840.0),
+        # DEF STAN 91-091 / ASTM D1655 Jet A-1 limits.
+        "FREEZE-D2386": (None, -47.0),
+        "COND-D2624": (50.0, 600.0),
+        "DIST10-D86": (None, 205.0),
+        "DISTFBP-D86": (None, 300.0),
     },
     "B100": {
         "DENS-D4052": (860.0, 900.0),
@@ -91,11 +118,16 @@ SPEC_LIMITS = {
         "SULF-D5453": (None, 10.0),
         "WATER-D6304": (None, 500.0),
         "VISC-D445": (3.5, 5.0),
+        "DENS-D1298": (860.0, 900.0),
+        "SED-D473": (None, 0.01),
     },
     "KERO": {
         "FLASH-D56": (38.0, None),
         "DENS-D4052": (775.0, 840.0),
         "SULF-D5453": (None, 2000.0),
+        "DENS-D1298": (775.0, 840.0),
+        "DIST10-D86": (None, 205.0),
+        "DISTFBP-D86": (None, 300.0),
     },
 }
 
@@ -106,6 +138,9 @@ INSTRUMENTS = [
     ("Karl Fischer Titrator", "Titrator", "KF-6304-007", 90),
     ("Automatic Distillation Unit", "Distillation Unit", "AD-86-003", 150),
     ("Viscometer Bath", "Viscometer", "VB-445-009", 60),
+    ("Hydrometer Set (D1298)", "Hydrometer", "HYD-1298-005", 75),
+    ("Freeze Point Apparatus", "Freeze Point Tester", "FP-2386-006", 45),
+    ("Conductivity Meter", "Conductivity Meter", "COND-2624-008", 100),
 ]
 
 

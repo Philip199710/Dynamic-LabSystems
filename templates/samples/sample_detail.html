@@ -50,7 +50,7 @@
       <button type="submit" class="btn">Assign test</button>
     </form>
     {% else %}
-    <p class="empty">All active test methods are already assigned to this sample.</p>
+    <p class="empty">All applicable test methods for {{ sample.fuel_type.name }} have been assigned to this sample.</p>
     {% endif %}
   </div>
 </div>

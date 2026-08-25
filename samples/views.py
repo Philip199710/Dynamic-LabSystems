@@ -45,8 +45,13 @@ def sample_detail(request, pk):
     tests = sample.tests.select_related("test_method", "assigned_to").all()
     custody_log = sample.custody_log.select_related("actor").all()
     assign_form = AssignTestForm(sample=sample)
-    available_methods = TestMethod.objects.filter(active=True).exclude(
-        id__in=tests.values_list("test_method_id", flat=True)
+    # Only offer methods that actually have a spec limit on file for this
+    # sample's fuel type — e.g. Freezing Point (D2386) shouldn't show up as
+    # assignable on a gasoline sample.
+    available_methods = (
+        TestMethod.objects.filter(active=True, spec_limits__fuel_type=sample.fuel_type)
+        .exclude(id__in=tests.values_list("test_method_id", flat=True))
+        .distinct()
     )
     return render(
         request,
