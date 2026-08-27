@@ -125,6 +125,7 @@ tr:last-child td { border-bottom: none; }
 table.compact th, table.compact td { padding: 0.4rem 0.5rem; }
 
 .badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.badge.requested { background: #fbe3e1; color: var(--red-dark); }
 .badge.received { background: #e7e9f4; color: var(--navy); }
 .badge.in_testing { background: #fdf1d9; color: var(--amber); }
 .badge.complete { background: #e2f6ea; color: var(--green); }

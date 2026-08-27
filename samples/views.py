@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from catalog.models import TestMethod
 from labtests.forms import AssignTestForm
@@ -64,6 +65,29 @@ def sample_detail(request, pk):
             "available_methods": available_methods,
         },
     )
+
+
+@login_required
+def sample_confirm_intake(request, pk):
+    """Staff confirms physical receipt of a sample a client requested online.
+
+    Moves a Sample.STATUS_REQUESTED record into the normal workflow
+    (STATUS_RECEIVED) — this is the point where the lab actually takes
+    custody, so it stamps received_by/date_received here rather than at
+    request time, and records an optional storage location.
+    """
+    sample = get_object_or_404(Sample, pk=pk)
+    if request.method == "POST" and sample.status == Sample.STATUS_REQUESTED:
+        storage_location = request.POST.get("storage_location", "").strip()
+        sample.status = Sample.STATUS_RECEIVED
+        sample.received_by = request.user
+        sample.date_received = timezone.localdate()
+        if storage_location:
+            sample.storage_location = storage_location
+        sample.save(update_fields=["status", "received_by", "date_received", "storage_location", "updated_at"])
+        sample.log(request.user, "Intake confirmed", notes=f"Storage location: {storage_location or '—'}")
+        messages.success(request, f"Intake confirmed for {sample.sample_id} — ready to assign tests.")
+    return redirect("samples:detail", pk=pk)
 
 
 @login_required

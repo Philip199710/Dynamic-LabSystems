@@ -5,7 +5,8 @@
   <div>
     <h1>{{ sample.sample_id }} <span class="badge {{ sample.status|lower }}">{{ sample.get_status_display }}</span></h1>
     <p class="subtitle">
-      {{ sample.fuel_type.name }} &middot; received {{ sample.date_received }}
+      {{ sample.fuel_type.name }}
+      {% if sample.status != "REQUESTED" %} &middot; received {{ sample.date_received }}{% endif %}
       {% if sample.certificate %} &middot; Certificate {{ sample.certificate.certificate_number }}{% endif %}
     </p>
   </div>
@@ -20,7 +21,9 @@
 
 <div class="card">
   <div class="section-title">Test results</div>
-  {% if rows %}
+  {% if sample.status == "REQUESTED" %}
+  <p class="empty">Submitted — waiting for the lab to confirm it's arrived before testing begins.</p>
+  {% elif rows %}
   <table>
     <tr><th>Test</th><th>Standard</th><th>Result</th><th></th></tr>
     {% for row in rows %}

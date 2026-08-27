@@ -7,11 +7,13 @@ from catalog.models import FuelType
 
 
 class Sample(models.Model):
+    STATUS_REQUESTED = "REQUESTED"
     STATUS_RECEIVED = "RECEIVED"
     STATUS_IN_TESTING = "IN_TESTING"
     STATUS_COMPLETE = "COMPLETE"
     STATUS_DISPOSED = "DISPOSED"
     STATUS_CHOICES = [
+        (STATUS_REQUESTED, "Requested"),
         (STATUS_RECEIVED, "Received"),
         (STATUS_IN_TESTING, "In testing"),
         (STATUS_COMPLETE, "Complete"),
@@ -68,7 +70,10 @@ class Sample(models.Model):
 
     def recompute_status(self):
         """Roll the sample status up from its tests. Called after test/result changes."""
-        if self.status == self.STATUS_DISPOSED:
+        # A client-submitted request sits untouched until a staff member
+        # confirms intake (samples:confirm_intake) — don't let test/result
+        # activity (there shouldn't be any yet) move it out of that state.
+        if self.status in (self.STATUS_DISPOSED, self.STATUS_REQUESTED):
             return
         tests = list(self.tests.all())
         resolved_statuses = ("COMPLETE", "FAILED_RETEST")

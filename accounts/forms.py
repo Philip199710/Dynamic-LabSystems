@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
+from samples.models import Sample
+
 from .models import Client, ClientProfile
 
 User = get_user_model()
@@ -54,3 +56,23 @@ class ClientRegistrationForm(forms.Form):
         client, _ = Client.objects.get_or_create(name=self.cleaned_data["company_name"].strip())
         profile = ClientProfile.objects.create(user=user, client=client)
         return profile
+
+
+class ClientSampleRequestForm(forms.ModelForm):
+    """A client submitting a sample for testing, from the client portal.
+
+    Deliberately narrow: no status, client, or received_by fields — the view
+    sets those. The sample lands as Sample.STATUS_REQUESTED, invisible to
+    testing workflows until a staff member confirms physical intake (see
+    samples.views.sample_confirm_intake).
+    """
+
+    class Meta:
+        model = Sample
+        fields = ["fuel_type", "source", "notes"]
+        widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
+        labels = {"source": "Source / description", "notes": "Notes for the lab (optional)"}
+        help_texts = {
+            "source": "e.g. the storage tank, delivery, or site this sample was drawn from.",
+            "notes": "Quantity shipped, urgency, special handling — anything the lab should know.",
+        }

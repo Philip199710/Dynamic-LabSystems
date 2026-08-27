@@ -6,6 +6,7 @@
     <h1>My samples</h1>
     <p class="subtitle">{{ profile.client.name }} &middot; {{ samples|length }} sample{{ samples|length|pluralize }}</p>
   </div>
+  <a href="{% url 'accounts:portal_request_sample' %}" class="btn">+ Request a sample</a>
 </div>
 
 <div class="card">
@@ -16,14 +17,14 @@
     <tr>
       <td><a href="{% url 'accounts:portal_sample_detail' s.pk %}">{{ s.sample_id }}</a></td>
       <td>{{ s.fuel_type.name }}</td>
-      <td>{{ s.date_received }}</td>
+      <td>{% if s.status == "REQUESTED" %}<span class="muted">awaiting intake</span>{% else %}{{ s.date_received }}{% endif %}</td>
       <td><span class="badge {{ s.status|lower }}">{{ s.get_status_display }}</span></td>
       <td><a href="{% url 'accounts:portal_sample_detail' s.pk %}" class="btn small secondary">Open</a></td>
     </tr>
     {% endfor %}
   </table>
   {% else %}
-  <p class="empty">No samples on file for {{ profile.client.name }} yet.</p>
+  <p class="empty">No samples on file for {{ profile.client.name }} yet. <a href="{% url 'accounts:portal_request_sample' %}">Request one</a>.</p>
   {% endif %}
 </div>
 {% endblock %}

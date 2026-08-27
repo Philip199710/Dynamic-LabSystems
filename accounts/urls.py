@@ -13,6 +13,7 @@ urlpatterns = [
         name="client_login",
     ),
     path("portal/", views.client_portal_home, name="portal_home"),
+    path("portal/samples/new/", views.client_portal_request_sample, name="portal_request_sample"),
     path("portal/sample/<int:pk>/", views.client_portal_sample_detail, name="portal_sample_detail"),
     path("portal/sample/<int:pk>/coa.pdf", views.client_portal_coa_pdf, name="portal_coa_pdf"),
     path("clients/pending/", views.pending_clients, name="pending_clients"),

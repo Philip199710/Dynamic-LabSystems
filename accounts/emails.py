@@ -41,6 +41,38 @@ def send_client_registration_notification(profile, request=None):
         logger.exception("Failed to send client-registration notification for %s", profile.client.name)
 
 
+def send_sample_requested_notification(sample, request=None):
+    """Tell staff a client submitted a new sample request awaiting intake."""
+    recipient = getattr(settings, "SAMPLE_NOTIFICATION_EMAIL", "")
+    if not recipient:
+        return
+
+    detail_path = reverse("samples:detail", args=[sample.pk])
+    detail_url = request.build_absolute_uri(detail_path) if request else detail_path
+
+    subject = f"[{settings.SITE_NAME}] Client sample request: {sample.sample_id}"
+    body = (
+        f"{sample.client.name} submitted a new sample through the client portal in {settings.SITE_NAME}.\n\n"
+        f"Sample ID:  {sample.sample_id}\n"
+        f"Fuel type:  {sample.fuel_type.name}\n"
+        f"Source:     {sample.source}\n"
+        f"Notes:      {sample.notes or '—'}\n\n"
+        f"It won't enter the testing workflow until a staff member confirms intake.\n"
+        f"Review: {detail_url}\n\n"
+        f"This is an automated notification — do not reply to this email."
+    )
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[recipient],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Failed to send sample-requested notification for %s", sample.sample_id)
+
+
 def send_client_approved_notification(profile, request=None):
     """Tell the client their portal account is now active."""
     if not profile.user.email:

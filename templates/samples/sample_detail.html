@@ -4,7 +4,11 @@
 <div class="page-header">
   <div>
     <h1>{{ sample.sample_id }} <span class="badge {{ sample.status|lower }}">{{ sample.get_status_display }}</span></h1>
-    <p class="subtitle">{{ sample.fuel_type.name }} &middot; from {{ sample.source }} &middot; received {{ sample.date_received }}</p>
+    <p class="subtitle">
+      {{ sample.fuel_type.name }} &middot; from {{ sample.source }}
+      {% if sample.status != "REQUESTED" %} &middot; received {{ sample.date_received }}{% endif %}
+      {% if sample.client %} &middot; requested by {{ sample.client.name }}{% endif %}
+    </p>
   </div>
   <div style="display:flex;gap:.5rem;">
     {% if sample.status == "COMPLETE" %}
@@ -48,6 +52,21 @@
   </div>
 
   <div class="card">
+    {% if sample.status == "REQUESTED" %}
+    <div class="section-title">Confirm intake</div>
+    <p class="help">
+      {{ sample.client.name }} requested this sample through the client portal. Confirm once it has
+      physically arrived to log it as received and start assigning tests.
+    </p>
+    <form method="post" action="{% url 'samples:confirm_intake' sample.pk %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="storage_location">Storage location (optional)</label>
+        <input type="text" id="storage_location" name="storage_location" placeholder="e.g. Rack 4">
+      </div>
+      <button type="submit" class="btn">Confirm intake</button>
+    </form>
+    {% else %}
     <div class="section-title">Assign a test</div>
     {% if available_methods %}
     <form method="post" action="{% url 'labtests:assign' sample.pk %}">
@@ -63,6 +82,7 @@
     </form>
     {% else %}
     <p class="empty">All applicable test methods for {{ sample.fuel_type.name }} have been assigned to this sample.</p>
+    {% endif %}
     {% endif %}
   </div>
 </div>

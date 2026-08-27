@@ -7,8 +7,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from reports.views import render_coa_pdf
 from samples.models import Sample
 
-from .emails import send_client_approved_notification, send_client_registration_notification
-from .forms import ClientRegistrationForm
+from .emails import (
+    send_client_approved_notification,
+    send_client_registration_notification,
+    send_sample_requested_notification,
+)
+from .forms import ClientRegistrationForm, ClientSampleRequestForm
 from .models import ClientProfile
 
 
@@ -52,6 +56,27 @@ def client_register(request):
 def client_portal_home(request, profile):
     samples = profile.client.samples.select_related("fuel_type").order_by("-created_at")
     return render(request, "accounts/portal_home.html", {"profile": profile, "samples": samples})
+
+
+@client_portal_required
+def client_portal_request_sample(request, profile):
+    if request.method == "POST":
+        form = ClientSampleRequestForm(request.POST)
+        if form.is_valid():
+            sample = form.save(commit=False)
+            sample.client = profile.client
+            sample.status = Sample.STATUS_REQUESTED
+            sample.save()
+            sample.log(request.user, "Sample requested via client portal", notes=f"Source: {sample.source}")
+            send_sample_requested_notification(sample, request=request)
+            messages.success(
+                request,
+                f"Request submitted — {sample.sample_id} will show up once a Lab Manager confirms intake.",
+            )
+            return redirect("accounts:portal_sample_detail", pk=sample.pk)
+    else:
+        form = ClientSampleRequestForm()
+    return render(request, "accounts/portal_request_sample.html", {"profile": profile, "form": form})
 
 
 @client_portal_required
