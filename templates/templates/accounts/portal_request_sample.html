@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Request a sample · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Request a sample</h1>
+    <p class="subtitle">{{ profile.client.name }}</p>
+  </div>
+</div>
+<div class="card" style="max-width:560px;">
+  <p class="help" style="margin-top:0;">
+    Submitting this doesn't start testing yet — it lets {{ SITE_NAME }} know a sample is on its way.
+    A Lab Manager confirms intake once it physically arrives, and it'll show up in your sample list
+    right away so you can track its status.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="field">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn">Submit request</button>
+  </form>
+</div>
+{% endblock %}
