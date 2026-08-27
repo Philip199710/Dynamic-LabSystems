@@ -7,4 +7,5 @@ app_name = "reports"
 urlpatterns = [
     path("sample/<int:pk>/coa.pdf", views.sample_coa_pdf, name="coa_pdf"),
     path("sample/<int:pk>/coa/preview/", views.sample_coa_preview, name="coa_preview"),
+    path("sample/<int:pk>/certificate/issue/", views.issue_certificate, name="issue_certificate"),
 ]

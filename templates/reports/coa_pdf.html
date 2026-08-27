@@ -57,6 +57,12 @@
         <p class="title">Certificate of Analysis</p>
       </td>
       <td style="width:42%;" class="meta-block">
+        {% if certificate %}
+        <strong>Certificate No.:</strong> {{ certificate.certificate_number }}<br>
+        <strong>Issued:</strong> {{ certificate.issued_at|date:"Y-m-d H:i" }}<br>
+        {% else %}
+        <strong>Status:</strong> DRAFT — not yet issued<br>
+        {% endif %}
         <strong>Sample:</strong> {{ sample.sample_id }}<br>
         <strong>Generated:</strong> {{ generated_at|date:"Y-m-d H:i" }}
       </td>

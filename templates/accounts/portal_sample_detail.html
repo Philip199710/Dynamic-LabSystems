@@ -4,11 +4,16 @@
 <div class="page-header">
   <div>
     <h1>{{ sample.sample_id }} <span class="badge {{ sample.status|lower }}">{{ sample.get_status_display }}</span></h1>
-    <p class="subtitle">{{ sample.fuel_type.name }} &middot; received {{ sample.date_received }}</p>
+    <p class="subtitle">
+      {{ sample.fuel_type.name }} &middot; received {{ sample.date_received }}
+      {% if sample.certificate %} &middot; Certificate {{ sample.certificate.certificate_number }}{% endif %}
+    </p>
   </div>
   <div>
-    {% if sample.status == "COMPLETE" %}
+    {% if sample.certificate %}
     <a href="{% url 'accounts:portal_coa_pdf' sample.pk %}" class="btn">Download Certificate (PDF)</a>
+    {% elif sample.status == "COMPLETE" %}
+    <span class="muted">Certificate pending QA sign-off</span>
     {% endif %}
   </div>
 </div>

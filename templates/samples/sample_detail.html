@@ -8,7 +8,17 @@
   </div>
   <div style="display:flex;gap:.5rem;">
     {% if sample.status == "COMPLETE" %}
-    <a href="{% url 'reports:coa_pdf' sample.pk %}" class="btn">Download COA (PDF)</a>
+      {% if sample.certificate %}
+      <a href="{% url 'reports:coa_pdf' sample.pk %}" class="btn">Download Certificate (PDF)</a>
+      {% elif perms.reports.add_certificate %}
+      <form method="post" action="{% url 'reports:issue_certificate' sample.pk %}" onsubmit="return confirm('Issue a formal certificate of analysis for {{ sample.sample_id }}? This assigns a permanent certificate number and makes it available in the client portal.');">
+        {% csrf_token %}
+        <button type="submit" class="btn">Issue Certificate</button>
+      </form>
+      <a href="{% url 'reports:coa_pdf' sample.pk %}" class="btn secondary">Download draft (PDF)</a>
+      {% else %}
+      <a href="{% url 'reports:coa_pdf' sample.pk %}" class="btn secondary">Download draft (PDF)</a>
+      {% endif %}
     {% endif %}
     {% if sample.status != "DISPOSED" %}
     <form method="post" action="{% url 'samples:dispose' sample.pk %}" onsubmit="return confirm('Mark this sample as disposed?');">
@@ -32,6 +42,7 @@
       <tr><td class="muted">Storage location</td><td>{{ sample.storage_location|default:"—" }}</td></tr>
       <tr><td class="muted">Received by</td><td>{{ sample.received_by.get_username|default:"—" }}</td></tr>
       <tr><td class="muted">Client portal</td><td>{% if sample.client %}{{ sample.client.name }}{% else %}<span class="muted">not linked</span>{% endif %}</td></tr>
+      <tr><td class="muted">Certificate</td><td>{% if sample.certificate %}{{ sample.certificate.certificate_number }} <span class="muted">— issued {{ sample.certificate.issued_at|date:"M j, Y H:i" }} by {{ sample.certificate.issued_by.get_username|default:"—" }}</span>{% else %}<span class="muted">not yet issued</span>{% endif %}</td></tr>
       <tr><td class="muted">Notes</td><td>{{ sample.notes|default:"—" }}</td></tr>
     </table>
   </div>

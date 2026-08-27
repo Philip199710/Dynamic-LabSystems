@@ -78,6 +78,9 @@ def client_portal_sample_detail(request, profile, pk):
 @client_portal_required
 def client_portal_coa_pdf(request, profile, pk):
     sample = get_object_or_404(Sample, pk=pk, client=profile.client)
+    if not hasattr(sample, "certificate"):
+        messages.info(request, "This sample's certificate hasn't been issued yet.")
+        return redirect("accounts:portal_sample_detail", pk=pk)
     return render_coa_pdf(sample)
 
 
