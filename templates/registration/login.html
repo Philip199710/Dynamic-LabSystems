@@ -25,6 +25,11 @@
         <input type="hidden" name="next" value="{{ next }}">
         <button type="submit" class="btn">Sign in</button>
       </form>
+      <p class="help" style="margin-top:1rem;">
+        This sign-in is for lab staff. Are you a client?
+        <a href="{% url 'accounts:client_login' %}">Sign in to your client portal</a>,
+        or <a href="{% url 'accounts:register' %}">create a client account</a>.
+      </p>
     </div>
   </div>
 </body>
