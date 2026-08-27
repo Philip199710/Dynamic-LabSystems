@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ sample.sample_id }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ sample.sample_id }} <span class="badge {{ sample.status|lower }}">{{ sample.get_status_display }}</span></h1>
+    <p class="subtitle">{{ sample.fuel_type.name }} &middot; received {{ sample.date_received }}</p>
+  </div>
+  <div>
+    {% if sample.status == "COMPLETE" %}
+    <a href="{% url 'accounts:portal_coa_pdf' sample.pk %}" class="btn">Download Certificate (PDF)</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Test results</div>
+  {% if rows %}
+  <table>
+    <tr><th>Test</th><th>Standard</th><th>Result</th><th></th></tr>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.test_method.name }}</td>
+      <td class="muted">{{ row.test_method.standard_reference }}</td>
+      <td>
+        {% if row.result %}
+          {{ row.result.value }} {{ row.test_method.unit }}
+        {% else %}<span class="muted">pending</span>{% endif %}
+      </td>
+      <td>
+        {% if row.verdict == True %}<span class="badge pass">PASS</span>
+        {% elif row.verdict == False %}<span class="badge fail">OUT OF SPEC</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No tests assigned yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

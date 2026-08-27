@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Client Portal · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Client Portal</h1></div>
+<div class="card" style="max-width:560px;">
+  {% if profile %}
+    <p>Your account for <strong>{{ profile.client.name }}</strong> is registered but still waiting on approval from a Lab Manager.</p>
+    <p class="help">You'll get an email once it's approved — no further action needed on your end.</p>
+  {% else %}
+    <p>This account isn't set up for the client portal.</p>
+    <p class="help">If you're a client looking to view sample results, <a href="{% url 'accounts:register' %}">create a client account</a> instead.</p>
+  {% endif %}
+</div>
+{% endblock %}

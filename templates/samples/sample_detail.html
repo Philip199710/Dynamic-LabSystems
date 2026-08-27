@@ -31,6 +31,7 @@
     <table class="compact">
       <tr><td class="muted">Storage location</td><td>{{ sample.storage_location|default:"—" }}</td></tr>
       <tr><td class="muted">Received by</td><td>{{ sample.received_by.get_username|default:"—" }}</td></tr>
+      <tr><td class="muted">Client portal</td><td>{% if sample.client %}{{ sample.client.name }}{% else %}<span class="muted">not linked</span>{% endif %}</td></tr>
       <tr><td class="muted">Notes</td><td>{{ sample.notes|default:"—" }}</td></tr>
     </table>
   </div>

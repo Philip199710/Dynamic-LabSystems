@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Client approvals · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Client approvals</h1>
+    <p class="subtitle">{{ pending|length }} account{{ pending|length|pluralize }} waiting for review</p>
+  </div>
+</div>
+
+<div class="card">
+  {% if pending %}
+  <table>
+    <tr><th>Company</th><th>Contact</th><th>Email</th><th>Requested</th><th></th></tr>
+    {% for profile in pending %}
+    <tr>
+      <td>{{ profile.client.name }}</td>
+      <td>{{ profile.user.get_full_name|default:profile.user.get_username }}</td>
+      <td class="muted">{{ profile.user.email }}</td>
+      <td class="muted">{{ profile.requested_at|date:"M j, Y H:i" }}</td>
+      <td>
+        <form method="post" action="{% url 'accounts:approve_client' profile.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn small">Approve</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No pending client accounts.</p>
+  {% endif %}
+</div>
+{% endblock %}

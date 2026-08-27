@@ -21,11 +21,13 @@ def _logo_data_uri():
         return ""
 
 
-@login_required
-def sample_coa_pdf(request, pk):
-    sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
-    tests = sample.tests.select_related("test_method", "assigned_to").all()
+def coa_context(sample):
+    """Build the template context for a Certificate of Analysis.
 
+    Shared by the staff-facing reports views below and the client-portal
+    views in accounts.views, so both render the exact same certificate.
+    """
+    tests = sample.tests.select_related("test_method", "assigned_to").all()
     rows = []
     for t in tests:
         result = t.result
@@ -38,16 +40,18 @@ def sample_coa_pdf(request, pk):
                 "verdict": result.pass_fail if result else None,
             }
         )
-
-    context = {
+    return {
         "sample": sample,
         "rows": rows,
         "generated_at": timezone.localtime(),
         "site_name": settings.SITE_NAME,
         "logo_data_uri": _logo_data_uri(),
     }
-    html = render_to_string("reports/coa_pdf.html", context)
 
+
+def render_coa_pdf(sample):
+    """Render a sample's Certificate of Analysis as a downloadable PDF response."""
+    html = render_to_string("reports/coa_pdf.html", coa_context(sample))
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="COA_{sample.sample_id}.pdf"'
     pisa_status = pisa.CreatePDF(html, dest=response)
@@ -57,26 +61,12 @@ def sample_coa_pdf(request, pk):
 
 
 @login_required
+def sample_coa_pdf(request, pk):
+    sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
+    return render_coa_pdf(sample)
+
+
+@login_required
 def sample_coa_preview(request, pk):
     sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
-    tests = sample.tests.select_related("test_method", "assigned_to").all()
-    rows = []
-    for t in tests:
-        result = t.result
-        limit = t.spec_limit
-        rows.append(
-            {
-                "test_method": t.test_method,
-                "result": result,
-                "limit": limit,
-                "verdict": result.pass_fail if result else None,
-            }
-        )
-    context = {
-        "sample": sample,
-        "rows": rows,
-        "generated_at": timezone.localtime(),
-        "site_name": settings.SITE_NAME,
-        "logo_data_uri": _logo_data_uri(),
-    }
-    return render(request, "reports/coa_pdf.html", context)
+    return render(request, "reports/coa_pdf.html", coa_context(sample))

@@ -182,7 +182,10 @@ class Command(BaseCommand):
             cts = ContentType.objects.filter(app_label__in=app_labels)
             return Permission.objects.filter(content_type__in=cts, codename__regex=r"^(" + "|".join(actions) + r")_")
 
-        all_apps = ["catalog", "samples", "labtests", "reports"]
+        # "accounts" grants add/change/delete/view on Client and
+        # ClientProfile — Lab Manager/QA need change_clientprofile in
+        # particular to approve pending client-portal signups.
+        all_apps = ["catalog", "samples", "labtests", "reports", "accounts"]
         full_actions = ["add", "change", "delete", "view"]
 
         lab_manager = Group.objects.get(name="Lab Manager")

@@ -1,0 +1,39 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create a client account · {{ SITE_NAME }}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card" style="max-width:440px;">
+      <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
+      <h1>Create a client account</h1>
+      <p class="help" style="margin:-0.5rem 0 1rem;">
+        Register to view your sample status and download certificates of analysis online.
+        A Lab Manager reviews and approves every new account before it can sign in.
+      </p>
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+          {{ field.errors }}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn">Create account</button>
+      </form>
+      <p class="help" style="margin-top:1rem;">Already have an account? <a href="{% url 'accounts:client_login' %}">Sign in</a></p>
+    </div>
+  </div>
+</body>
+</html>

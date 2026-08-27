@@ -21,6 +21,14 @@ class Sample(models.Model):
     sample_id = models.CharField(max_length=20, unique=True, editable=False)
     fuel_type = models.ForeignKey(FuelType, on_delete=models.PROTECT, related_name="samples")
     source = models.CharField(max_length=150, help_text="Client, site, or submitter")
+    client = models.ForeignKey(
+        "accounts.Client",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="samples",
+        help_text="Link to a client-portal account so this sample (and its certificate) shows up in their portal.",
+    )
     date_received = models.DateField(default=timezone.localdate)
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="samples_received"
