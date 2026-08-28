@@ -24,8 +24,14 @@
   {% if sample.status == "REQUESTED" %}
   <p class="empty">Submitted — waiting for the lab to confirm it's arrived before testing begins.</p>
   {% elif rows %}
+  {% if not locked %}
+  <p class="help" style="margin-top:0;">
+    You can record your own results below. Once {{ SITE_NAME }} issues the certificate for this
+    sample, results lock and can no longer be changed.
+  </p>
+  {% endif %}
   <table>
-    <tr><th>Test</th><th>Standard</th><th>Result</th><th></th></tr>
+    <tr><th>Test</th><th>Standard</th><th>Result</th><th></th><th></th></tr>
     {% for row in rows %}
     <tr>
       <td>{{ row.test_method.name }}</td>
@@ -39,6 +45,13 @@
         {% if row.verdict == True %}<span class="badge pass">PASS</span>
         {% elif row.verdict == False %}<span class="badge fail">OUT OF SPEC</span>
         {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td>
+        {% if not locked %}
+        <a href="{% url 'accounts:portal_enter_result' row.sample_test.pk %}" class="btn small secondary">
+          {% if row.result %}Edit result{% else %}Enter result{% endif %}
+        </a>
+        {% endif %}
       </td>
     </tr>
     {% endfor %}

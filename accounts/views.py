@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from labtests.forms import ResultEntryForm
+from labtests.models import SampleTest
 from reports.views import render_coa_pdf
 from samples.models import Sample
 
@@ -85,8 +87,10 @@ def client_portal_sample_detail(request, profile, pk):
         Sample.objects.select_related("fuel_type"), pk=pk, client=profile.client
     )
     tests = sample.tests.select_related("test_method").all()
+    locked = hasattr(sample, "certificate")
     rows = [
         {
+            "sample_test": t,
             "test_method": t.test_method,
             "result": t.result,
             "verdict": t.result.pass_fail if t.result else None,
@@ -96,7 +100,50 @@ def client_portal_sample_detail(request, profile, pk):
     return render(
         request,
         "accounts/portal_sample_detail.html",
-        {"profile": profile, "sample": sample, "rows": rows},
+        {"profile": profile, "sample": sample, "rows": rows, "locked": locked},
+    )
+
+
+@client_portal_required
+def client_portal_enter_result(request, profile, pk):
+    """A client recording their own test result for one of their samples.
+
+    No lab review gate on the value itself — Dynamic LabSystems chose to
+    let clients enter and finalize their own readings (mirrors staff's
+    enter_result). What stays staff-only is issuing the certificate
+    (reports.views.issue_certificate): once that's happened, results here
+    are locked, so a client can't edit the numbers a certificate already
+    went out on. TestResult.record() logs every entry to the sample's
+    chain-of-custody with the acting user, so a client-entered value is
+    always visibly attributed to the client account that entered it.
+    """
+    sample_test = get_object_or_404(
+        SampleTest.objects.select_related("sample", "test_method"),
+        pk=pk,
+        sample__client=profile.client,
+    )
+    if hasattr(sample_test.sample, "certificate"):
+        messages.error(request, "This sample's certificate has already been issued — results are locked.")
+        return redirect("accounts:portal_sample_detail", pk=sample_test.sample_id)
+
+    existing = sample_test.result
+    if request.method == "POST":
+        form = ResultEntryForm(request.POST, instance=existing)
+        if form.is_valid():
+            result = form.save(commit=False)
+            result.sample_test = sample_test
+            result.entered_by = request.user
+            result.record(request.user)
+            verdict = result.pass_fail
+            if verdict is False:
+                messages.warning(request, f"Result recorded — OUT OF SPEC for {sample_test.test_method.name}.")
+            else:
+                messages.success(request, f"Result recorded for {sample_test.test_method.name}.")
+            return redirect("accounts:portal_sample_detail", pk=sample_test.sample_id)
+    else:
+        form = ResultEntryForm(instance=existing)
+    return render(
+        request, "accounts/portal_enter_result.html", {"profile": profile, "form": form, "sample_test": sample_test}
     )
 
 

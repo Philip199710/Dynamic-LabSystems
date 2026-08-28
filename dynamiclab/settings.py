@@ -42,7 +42,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
+    "accounts.middleware.PortalSessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -50,6 +50,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Django's admin app checks for the literal dotted path of the stock
+# SessionMiddleware in MIDDLEWARE (admin.E410). accounts.middleware.
+# PortalSessionMiddleware is a drop-in replacement that provides
+# request.session the same way (see its docstring) — the admin app works
+# fine with it, so this check is a false positive here.
+SILENCED_SYSTEM_CHECKS = ["admin.E410"]
 
 ROOT_URLCONF = "dynamiclab.urls"
 

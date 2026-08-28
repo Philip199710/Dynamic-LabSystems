@@ -27,7 +27,11 @@
     </nav>
     <div class="user">
       <span>{{ user.get_username }}</span>
+      {% if user.client_profile %}
+      <form method="post" action="{% url 'accounts:portal_logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+      {% else %}
       <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+      {% endif %}
     </div>
   </header>
   {% endif %}
