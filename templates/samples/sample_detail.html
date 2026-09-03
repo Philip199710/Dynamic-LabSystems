@@ -43,6 +43,13 @@
   <div class="card">
     <div class="section-title">Sample details</div>
     <table class="compact">
+      <tr><td class="muted">Drawn from</td><td>{% if sample.source_type %}{{ sample.get_source_type_display }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+      <tr><td class="muted">Tank / tanker ID</td><td>{{ sample.tank_or_tanker_id|default:"—" }}</td></tr>
+      {% if sample.source_type == "ROAD_TANKER" %}
+      <tr><td class="muted">Tanker plate number</td><td>{{ sample.tanker_plate_number|default:"—" }}</td></tr>
+      {% endif %}
+      <tr><td class="muted">Origin</td><td>{{ sample.origin|default:"—" }}</td></tr>
+      <tr><td class="muted">Destination port</td><td>{{ sample.destination_port|default:"—" }}</td></tr>
       <tr><td class="muted">Storage location</td><td>{{ sample.storage_location|default:"—" }}</td></tr>
       <tr><td class="muted">Received by</td><td>{{ sample.received_by.get_username|default:"—" }}</td></tr>
       <tr><td class="muted">Client portal</td><td>{% if sample.client %}{{ sample.client.name }}{% else %}<span class="muted">not linked</span>{% endif %}</td></tr>

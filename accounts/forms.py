@@ -69,10 +69,30 @@ class ClientSampleRequestForm(forms.ModelForm):
 
     class Meta:
         model = Sample
-        fields = ["fuel_type", "source", "notes"]
+        fields = [
+            "fuel_type",
+            "source",
+            "source_type",
+            "tank_or_tanker_id",
+            "tanker_plate_number",
+            "origin",
+            "destination_port",
+            "notes",
+        ]
         widgets = {"notes": forms.Textarea(attrs={"rows": 3})}
         labels = {"source": "Source / description", "notes": "Notes for the lab (optional)"}
         help_texts = {
             "source": "e.g. the storage tank, delivery, or site this sample was drawn from.",
             "notes": "Quantity shipped, urgency, special handling — anything the lab should know.",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("source_type", "tank_or_tanker_id", "tanker_plate_number", "origin", "destination_port"):
+            self.fields[name].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("source_type") == Sample.SOURCE_TYPE_ROAD_TANKER and not cleaned.get("tanker_plate_number"):
+            self.add_error("tanker_plate_number", "Required when the sample is drawn from a road tanker.")
+        return cleaned

@@ -89,6 +89,23 @@
     </tr>
   </table>
 
+  {% if sample.source_type or sample.tank_or_tanker_id or sample.origin or sample.destination_port %}
+  <table class="meta">
+    <tr>
+      <td class="label">Drawn from</td><td>{% if sample.source_type %}{{ sample.get_source_type_display }}{% else %}—{% endif %}</td>
+      <td class="label">Tank / tanker ID</td><td>{{ sample.tank_or_tanker_id|default:"—" }}</td>
+    </tr>
+    <tr>
+      <td class="label">Tanker plate no.</td><td>{{ sample.tanker_plate_number|default:"—" }}</td>
+      <td class="label">Origin</td><td>{{ sample.origin|default:"—" }}</td>
+    </tr>
+    <tr>
+      <td class="label">Destination port</td><td>{{ sample.destination_port|default:"—" }}</td>
+      <td class="label"></td><td></td>
+    </tr>
+  </table>
+  {% endif %}
+
   <table class="results">
     <tr>
       <th>Test</th>

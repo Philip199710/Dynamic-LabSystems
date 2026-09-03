@@ -20,9 +20,39 @@ class Sample(models.Model):
         (STATUS_DISPOSED, "Disposed"),
     ]
 
+    SOURCE_TYPE_TANK = "TANK"
+    SOURCE_TYPE_ROAD_TANKER = "ROAD_TANKER"
+    SOURCE_TYPE_CHOICES = [
+        (SOURCE_TYPE_TANK, "Storage tank"),
+        (SOURCE_TYPE_ROAD_TANKER, "Road tanker"),
+    ]
+
     sample_id = models.CharField(max_length=20, unique=True, editable=False)
     fuel_type = models.ForeignKey(FuelType, on_delete=models.PROTECT, related_name="samples")
     source = models.CharField(max_length=150, help_text="Client, site, or submitter")
+    source_type = models.CharField(
+        max_length=20,
+        choices=SOURCE_TYPE_CHOICES,
+        blank=True,
+        verbose_name="Drawn from",
+        help_text="What the sample was physically drawn from.",
+    )
+    tank_or_tanker_id = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Tank / tanker ID",
+        help_text="The storage tank number or road tanker's fleet/unit ID.",
+    )
+    tanker_plate_number = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Road tanker plate number",
+        help_text="Required if drawn from a road tanker.",
+    )
+    origin = models.CharField(
+        max_length=150, blank=True, help_text="Where the fuel originated — refinery, depot, terminal, etc."
+    )
+    destination_port = models.CharField(max_length=150, blank=True, help_text="Destination port or delivery point.")
     client = models.ForeignKey(
         "accounts.Client",
         on_delete=models.SET_NULL,
