@@ -42,6 +42,14 @@ FUEL_TYPES = [
     ("Marine Gas Oil (DMA)", "MGO", "Distillate marine bunker fuel, ISO 8217 grade ISO-F-DMA."),
     ("LPG / Autogas", "LPG", "Liquefied petroleum gas for automotive/cylinder use, per EN 589."),
     ("Aviation Gasoline (Avgas 100LL)", "AVGAS100LL", "Leaded piston-engine aviation fuel, per ASTM D910 / DEF STAN 91-90."),
+    (
+        "Crude Oil",
+        "CRUDE",
+        "Unrefined crude petroleum — characterized/assayed, not graded against a fixed pass/fail "
+        "spec the way a finished fuel is (different crude streams, e.g. WTI/Brent/Dubai/Maya, have "
+        "very different 'normal' values for the same property, none of them 'out of spec'). Its "
+        "test methods below are recorded for the assay report, not scored against a min/max.",
+    ),
 ]
 
 # code, name, standard, unit
@@ -88,6 +96,26 @@ TEST_METHODS = [
     ("MON-D2700", "Motor Octane Number", "ASTM D2700", "MON"),
     ("HEAT-D3338", "Net Heat of Combustion", "ASTM D3338", "MJ/kg"),
     ("TEL-D3341", "Tetraethyl Lead Content", "ASTM D3341", "g Pb/L"),
+    # Crude oil assay methods — crude has its own dedicated international
+    # standards distinct from finished-fuel testing (different apparatus,
+    # different reporting units/conventions):
+    ("API-D287", "API Gravity", "ASTM D287", "°API"),
+    ("BSW-D4007", "Water and Sediment (BS&W)", "ASTM D4007", "% vol"),
+    # Reported in the crude-trading industry's native unit, not converted to
+    # mg/kg, so results are directly comparable to cargo/assay paperwork.
+    ("SALT-D3230", "Salt Content", "ASTM D3230", "PTB"),
+    # The dissolved gas in live crude makes D323 (Reid Method, built for
+    # finished products) unreliable — D6377 is the method actually used for
+    # crude oil vapor pressure.
+    ("VAPOR-D6377", "Vapor Pressure, Crude Oil (VPCRx)", "ASTM D6377", "kPa"),
+    ("POUR-D97", "Pour Point", "ASTM D97", "°C"),
+    ("TAN-D664", "Total Acid Number (TAN)", "ASTM D664", "mg KOH/g"),
+    ("H2S-D7621", "Hydrogen Sulfide Content", "ASTM D7621", "mg/kg"),
+    # Crude's sulfur is normally read by X-ray fluorescence (D4294), not the
+    # UV-fluorescence method (D5453) used for the much-lower ppm levels in
+    # finished fuels, and is reported as % mass, not mg/kg, to match how
+    # crude assays (e.g. "sweet" vs. "sour") are actually quoted.
+    ("SULF-D4294", "Sulfur Content (X-ray Fluorescence)", "ASTM D4294", "% mass"),
 ]
 
 # fuel_code -> {test_code: (min, max)}
@@ -225,6 +253,24 @@ SPEC_LIMITS = {
         "RVP-D5191": (38.0, 49.0),
         "HEAT-D3338": (43.5, None),
         "TEL-D3341": (None, 0.56),
+    },
+    # Crude oil: every value below is recorded for the assay report, not
+    # graded pass/fail — there's no single international acceptance number
+    # for e.g. API gravity or sulfur the way there is for a finished fuel;
+    # different crude streams simply have different (equally "correct")
+    # values. See the FuelType description above for the full reasoning.
+    "CRUDE": {
+        "API-D287": (None, None),
+        "DENS-D4052": (None, None),
+        "SULF-D4294": (None, None),
+        "BSW-D4007": (None, None),
+        "SALT-D3230": (None, None),
+        "VAPOR-D6377": (None, None),
+        "POUR-D97": (None, None),
+        "VISC-D445": (None, None),
+        "TAN-D664": (None, None),
+        "H2S-D7621": (None, None),
+        "FLASH-D93": (None, None),
     },
 }
 
