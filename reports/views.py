@@ -11,6 +11,7 @@ from xhtml2pdf import pisa
 
 from samples.models import Sample
 
+from .charts import build_trend_charts
 from .models import Certificate
 
 
@@ -43,9 +44,11 @@ def coa_context(sample):
                 "verdict": result.pass_fail if result else None,
             }
         )
+    rows = build_trend_charts(rows)
     return {
         "sample": sample,
         "rows": rows,
+        "has_trend_charts": any(row["chart"] for row in rows),
         "certificate": getattr(sample, "certificate", None),
         "generated_at": timezone.localtime(),
         "site_name": settings.SITE_NAME,

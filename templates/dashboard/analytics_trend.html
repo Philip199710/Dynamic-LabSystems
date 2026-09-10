@@ -10,29 +10,39 @@
   <a href="{% url 'dashboard:analytics_index' %}" class="btn secondary">&larr; All methods</a>
 </div>
 
+{% if fuel_types_with_data|length > 1 %}
+<div class="filters">
+  {% for f in fuel_types_with_data %}
+  <a href="?fuel={{ f.code }}" class="{% if f == selected_fuel %}active{% endif %}">{{ f.name }}</a>
+  {% endfor %}
+</div>
+{% elif selected_fuel %}
+<p class="muted" style="margin-top:-0.5rem;">Showing {{ selected_fuel.name }} — the only fuel type with results on file for this test.</p>
+{% endif %}
+
 <div class="grid cols-4">
-  <div class="card stat"><div class="n">{{ points|length }}</div><div class="l">Results</div></div>
+  <div class="card stat"><div class="n">{{ points|length }}</div><div class="l">Results{% if selected_fuel %} · {{ selected_fuel.name }}{% endif %}</div></div>
   <div class="card stat"><div class="n">{{ mean|default:"—" }}</div><div class="l">Mean</div></div>
   <div class="card stat"><div class="n">{{ stdev|default:"—" }}</div><div class="l">Std. dev.</div></div>
   <div class="card stat"><div class="n">{{ pass_count }} / {{ fail_count }}</div><div class="l">Pass / out of spec</div></div>
 </div>
 
 <div class="card">
-  <div class="section-title">Trend &amp; control chart (mean ± 2σ / 3σ)</div>
+  <div class="section-title">Trend &amp; spec chart (shaded band = actual spec limit &middot; dotted lines = statistical mean / &plusmn;2&sigma; / &plusmn;3&sigma;)</div>
   {% if points %}
     <canvas id="trendChart" height="90"></canvas>
   {% else %}
-    <p class="empty">No results recorded for this method yet.</p>
+    <p class="empty">No results recorded for this method{% if selected_fuel %} on {{ selected_fuel.name }}{% endif %} yet.</p>
   {% endif %}
 </div>
 
 {% if fuel_types %}
 <div class="card">
-  <div class="section-title">Spec limits on file</div>
+  <div class="section-title">Spec limits on file (all fuel types using this method)</div>
   <table class="compact">
     <tr><th>Fuel type</th><th>Min</th><th>Max</th></tr>
     {% for f in fuel_types %}
-    <tr><td>{{ f.fuel_type.name }}</td><td>{{ f.min_value|default:"—" }}</td><td>{{ f.max_value|default:"—" }}</td></tr>
+    <tr class="{% if f.fuel_type == selected_fuel %}muted{% endif %}"><td>{{ f.fuel_type.name }}{% if f.fuel_type == selected_fuel %} (shown above){% endif %}</td><td>{{ f.min_value|default:"—" }}</td><td>{{ f.max_value|default:"—" }}</td></tr>
     {% endfor %}
   </table>
 </div>
@@ -45,6 +55,8 @@
   window.CHART_LCL2 = {{ lcl2|default_if_none:"null" }};
   window.CHART_UCL3 = {{ ucl3|default_if_none:"null" }};
   window.CHART_LCL3 = {{ lcl3|default_if_none:"null" }};
+  window.CHART_SPEC_MIN = {{ spec_min|default_if_none:"null" }};
+  window.CHART_SPEC_MAX = {{ spec_max|default_if_none:"null" }};
 </script>
 <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
 <script>
@@ -55,10 +67,30 @@
   var labels = points.map(function (p) { return p.date + ' · ' + p.label; });
   var values = points.map(function (p) { return p.value; });
   var pointColors = points.map(function (p) {
-    if (p.pass_fail === false) return '#e8352b';
+    if (p.pass_fail === false) return '#c62a21';
     if (p.pass_fail === true) return '#1f9d55';
-    return '#6b6f80';
+    return '#9a9dab';
   });
+
+  // Draw the real spec-limit band behind the plot area — the actual
+  // pass/fail boundary, distinct from (and usually tighter or wider than)
+  // the statistical mean +/- sigma control lines. No plugin dependency:
+  // a small beforeDraw hook, consistent with how this app vendors Chart.js
+  // locally rather than pulling in extra libraries from a CDN.
+  var specBandPlugin = {
+    id: 'specBand',
+    beforeDraw: function (chart) {
+      var min = window.CHART_SPEC_MIN, max = window.CHART_SPEC_MAX;
+      if (min === null && max === null) return;
+      var ctx = chart.ctx, area = chart.chartArea, yScale = chart.scales.y;
+      var top = max !== null ? yScale.getPixelForValue(max) : area.top;
+      var bottom = min !== null ? yScale.getPixelForValue(min) : area.bottom;
+      ctx.save();
+      ctx.fillStyle = 'rgba(31, 157, 85, 0.08)';
+      ctx.fillRect(area.left, top, area.right - area.left, bottom - top);
+      ctx.restore();
+    },
+  };
 
   var datasets = [{
     label: 'Result',
@@ -66,7 +98,10 @@
     borderColor: '#333750',
     backgroundColor: '#333750',
     pointBackgroundColor: pointColors,
-    pointRadius: 4,
+    pointBorderColor: '#ffffff',
+    pointBorderWidth: 1,
+    pointRadius: 4.5,
+    pointHoverRadius: 6,
     tension: 0.15,
   }];
 
@@ -87,17 +122,34 @@
     flatLine('Mean', window.CHART_MEAN, '#22232e', []),
     flatLine('+2σ', window.CHART_UCL2, '#b8860b', [6, 4]),
     flatLine('-2σ', window.CHART_LCL2, '#b8860b', [6, 4]),
-    flatLine('+3σ', window.CHART_UCL3, '#e8352b', [3, 3]),
-    flatLine('-3σ', window.CHART_LCL3, '#e8352b', [3, 3]),
+    flatLine('+3σ', window.CHART_UCL3, '#c62a21', [3, 3]),
+    flatLine('-3σ', window.CHART_LCL3, '#c62a21', [3, 3]),
   ].forEach(function (d) { if (d) datasets.push(d); });
 
   new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: { labels: labels, datasets: datasets },
+    plugins: [specBandPlugin],
     options: {
       responsive: true,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
-      scales: { x: { ticks: { maxRotation: 60, minRotation: 0 } } },
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              if (ctx.dataset.label !== 'Result') return ctx.dataset.label + ': ' + ctx.formattedValue;
+              var p = points[ctx.dataIndex];
+              var verdict = p.pass_fail === true ? 'PASS' : p.pass_fail === false ? 'OUT OF SPEC' : 'recorded';
+              return p.label + ': ' + ctx.formattedValue + ' — ' + verdict;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { maxRotation: 60, minRotation: 0 } },
+        y: { title: { display: true, text: '{{ method.unit|escapejs }}', color: '#6b6f80' } },
+      },
     },
   });
 })();

@@ -31,6 +31,16 @@
   .fail { color: #c62a21; font-weight: bold; }
   .unknown { color: #6b6f80; }
 
+  .trend-section { margin-top: 18px; page-break-inside: auto; }
+  .trend-heading { color: #333750; font-size: 13px; font-weight: bold; margin: 0 0 3px; border-top: 1.5px solid #22232e; padding-top: 10px; }
+  .trend-subheading { color: #6b6f80; font-size: 9px; line-height: 1.5; margin: 0 0 10px; }
+  .trend-card { margin-bottom: 10px; page-break-inside: avoid; border: 1px solid #e2e3ea; border-radius: 3px; padding: 6px 8px 2px; }
+  .trend-card-head { width: 100%; }
+  .trend-title { font-size: 10.5px; font-weight: bold; color: #22232e; }
+  .trend-std { font-weight: normal; color: #6b6f80; font-size: 9px; }
+  .trend-verdict { text-align: right; font-size: 10px; }
+  .trend-img { width: 16.6cm; margin-top: 2px; }
+
   .footer { margin-top: 26px; border-top: 1px solid #d8d9e2; padding-top: 9px; }
   .footer-table { width: 100%; }
   .footer-mark {
@@ -128,6 +138,34 @@
     </tr>
     {% endfor %}
   </table>
+
+  {% if has_trend_charts %}
+  <div class="trend-section">
+    <p class="trend-heading">Result Trends</p>
+    <p class="trend-subheading">
+      Each chart plots every result on file for that test on this fuel type, with the real spec limit
+      band shaded and this sample's result circled — showing this result in the context of the fuel
+      type's own testing history, not just a single pass/fail number.
+    </p>
+    {% for row in rows %}
+    {% if row.chart %}
+    <div class="trend-card">
+      <table class="trend-card-head">
+        <tr>
+          <td class="trend-title">{{ row.test_method.name }} <span class="trend-std">({{ row.test_method.standard_reference }})</span></td>
+          <td class="trend-verdict">
+            {% if row.verdict == True %}<span class="pass">PASS</span>
+            {% elif row.verdict == False %}<span class="fail">OUT OF SPEC</span>
+            {% else %}<span class="unknown">recorded</span>{% endif %}
+          </td>
+        </tr>
+      </table>
+      <img class="trend-img" src="{{ row.chart }}" alt="{{ row.test_method.name }} trend">
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <div class="footer">
     <table class="footer-table">

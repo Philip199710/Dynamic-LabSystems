@@ -126,6 +126,20 @@ TEST_METHODS = [
     # run — a genuinely different method from every other distillation
     # entry in this catalog.
     ("DIST-D2892", "Distillation, True Boiling Point (TBP)", "ASTM D2892", "°C"),
+    # ISO 8217 grades a distillate marine fuel's ignition quality by a
+    # Calculated Cetane Index (from density + distillation temperatures via
+    # a formula), not an engine-tested Cetane Number — a genuinely
+    # different method from CETANE-D613, used for MGO instead.
+    ("CETANE-D4737", "Cetane Index (Calculated)", "ASTM D4737", "—"),
+    # EN 590's real "Total Contamination" test — also explicitly covers
+    # FAME (biodiesel) per its own scope, so it applies to both Diesel and
+    # B100 below.
+    ("TOTCONT-EN12662", "Total Contamination", "EN 12662", "mg/kg"),
+    # ASTM D473 (used elsewhere in this catalog) is explicitly scoped to
+    # "Crude Oils and Fuel Oils" — gasoline is too light/volatile for that
+    # extraction method to be meaningful. Gasoline's real particulate
+    # contamination method is D5452 (laboratory filtration).
+    ("SED-D5452", "Particulate Contamination (Filtration)", "ASTM D5452", "mg/L"),
 ]
 
 # fuel_code -> {test_code: (min, max)}
@@ -146,11 +160,12 @@ SPEC_LIMITS = {
         # graded) — this is the typical real-world operating range reported
         # on gasoline certificates of quality, not an EN 228 pass/fail limit.
         "DIST-IBP-D86": (30.0, 45.0),
-        # Gasoline's flash point is a fixed physical property of such a
-        # volatile fuel (well below ambient) — EN 228/ASTM D4814 don't grade
-        # it as a pass/fail spec (RVP governs volatility instead). Typical
-        # SDS-reported range for finished motor gasoline, informational only.
-        "FLASH-D56": (-45.0, -20.0),
+        # No flash point entry: gasoline's flash point is a fixed physical
+        # property well below ambient, and ASTM D56 (Tag Closed Cup)'s
+        # practical operating range doesn't reliably extend that low — the
+        # same reason EN 228/ASTM D4814 don't grade it at all (RVP governs
+        # volatility instead). Carrying a number under a method that can't
+        # reliably produce it would be less accurate, not more.
         # EN 228 sets no numeric water content — only a visual "clear and
         # bright, free from water" requirement. Typical trace figure some
         # labs track informationally, not an EN 228 pass/fail number.
@@ -159,9 +174,11 @@ SPEC_LIMITS = {
         # A-1's mandatory static-dissipator range) — recorded only where a
         # static-dissipator additive is dosed for pipeline/terminal safety.
         "COND-D2624": (None, None),
-        # EN 228 sets no numeric sediment/particulate limit for gasoline.
-        # Typical trace figure, informational only.
-        "SED-D473": (None, 0.01),
+        # ASTM D473 (used elsewhere in this catalog) is scoped to "Crude
+        # Oils and Fuel Oils" by name — not gasoline. D5452 (laboratory
+        # filtration) is gasoline's real particulate contamination method;
+        # typical trace figure, EN 228 sets no numeric limit.
+        "SED-D5452": (None, 10.0),
     },
     "GAS91": {
         "RON-D2699": (91.0, None),
@@ -172,10 +189,9 @@ SPEC_LIMITS = {
         "DIST10-D86": (None, 50.0),
         "DISTFBP-D86": (None, 210.0),
         "DIST-IBP-D86": (30.0, 45.0),
-        "FLASH-D56": (-45.0, -20.0),
         "WATER-D6304": (None, 100.0),
         "COND-D2624": (None, None),
-        "SED-D473": (None, 0.01),
+        "SED-D5452": (None, 10.0),
     },
     # EN 590 (European automotive diesel standard, widely followed across
     # Asia-Pacific export/import markets) — every limit below matches EN 590
@@ -203,6 +219,10 @@ SPEC_LIMITS = {
         # static-safety during switch-loading (min conductivity so charge
         # dissipates rather than building up). Informational.
         "COND-D2624": (25.0, None),
+        # EN 590's real "Total Contamination" spec (EN 12662 method) — a
+        # genuine official limit that supplements the D473 sediment screen
+        # above with the number actually on the EN 590 datasheet.
+        "TOTCONT-EN12662": (None, 24.0),
     },
     "JETA1": {
         "FLASH-D56": (38.0, None),
@@ -257,6 +277,9 @@ SPEC_LIMITS = {
         "SED-D473": (None, 0.01),
         # No biodiesel conductivity spec on file. Recorded only.
         "COND-D2624": (None, None),
+        # EN 12662's scope explicitly names FAME alongside diesel fuels —
+        # same 24 mg/kg real limit applies to B100.
+        "TOTCONT-EN12662": (None, 24.0),
     },
     # ASTM D3699 No. 1-K (higher-quality illuminating/heating grade — matches
     # this fuel type's own description) plus DEF STAN/D1655-derived
@@ -315,7 +338,11 @@ SPEC_LIMITS = {
         "DENS-D4052": (None, 890.0),
         "VISC-D445": (2.0, 6.0),
         "FLASH-D93": (60.0, None),
-        "CETANE-D613": (40.0, None),
+        # ISO 8217 grades DMA's ignition quality by Calculated Cetane Index
+        # (from density + distillation via a formula, ASTM D4737) rather
+        # than an engine-tested Cetane Number (D613, used for road diesel
+        # above) — same real 40.0 minimum, correct method for this fuel.
+        "CETANE-D4737": (40.0, None),
         "SULF-D5453": (None, 1000.0),
         # No confirmed international water-content cap on file for DMA —
         # recorded, not auto pass/fail.
@@ -354,11 +381,10 @@ SPEC_LIMITS = {
         # certificate, not pass/fail) — typical range for an
         # alkylate/isooctane-based avgas blend, informational.
         "DENS-D4052": (690.0, 710.0),
-        # Avgas's flash point is a fixed physical property of such a
-        # volatile, gasoline-like fuel — D910 doesn't grade it as a
-        # pass/fail spec (RVP governs volatility instead), same reasoning
-        # as motor gasoline. Typical range, informational only.
-        "FLASH-D56": (-45.0, -35.0),
+        # No flash point entry, same reasoning as motor gasoline: avgas is
+        # a volatile, gasoline-like fuel with a sub-ambient flash point
+        # outside ASTM D56's reliable operating range — D910 doesn't grade
+        # it as a pass/fail spec either (RVP governs volatility instead).
         # D910 relies on a visual "clear and bright" + free-water check,
         # not a numeric KF ppm limit. Recorded only.
         "WATER-D6304": (None, None),
@@ -589,13 +615,37 @@ class Command(BaseCommand):
             if out_of_spec:
                 value = max_v + span * 0.15
         elif min_v is not None:
-            value = min_v + abs(min_v) * 0.05 + random.uniform(0, max(1.0, abs(min_v) * 0.1))
-            if out_of_spec:
-                value = min_v - abs(min_v) * 0.05
+            if min_v > 0:
+                # Scale multiplicatively off the bound itself, not a fixed
+                # absolute offset — a fixed +/-1.0-ish spread is invisible
+                # against a bound like 3000 but can overwhelm one like 25.
+                value = min_v * random.uniform(1.03, 1.15)
+                if out_of_spec:
+                    value = min_v * random.uniform(0.85, 0.97)
+            else:
+                value = min_v + abs(min_v) * 0.05 + random.uniform(0, max(1.0, abs(min_v) * 0.1))
+                if out_of_spec:
+                    value = min_v - abs(min_v) * 0.05
         elif max_v is not None:
-            value = max_v - abs(max_v) * 0.15 - random.uniform(0, max(1.0, abs(max_v) * 0.1))
-            if out_of_spec:
-                value = max_v + abs(max_v) * 0.2
+            if max_v > 0:
+                # Same fix, mirrored: a fixed absolute spread (the old
+                # "random.uniform(0, max(1.0, ...))" floor) could exceed a
+                # small positive bound entirely and swing the result
+                # negative — e.g. a max of 0.01% mass sediment coming out
+                # as -0.44%, which isn't physically possible. Scaling off
+                # max_v itself keeps the result in the right ballpark and
+                # always positive when the bound is a real quantity that
+                # can't itself go negative (a concentration, a %, a mg/kg).
+                value = max_v * random.uniform(0.55, 0.92)
+                if out_of_spec:
+                    value = max_v * random.uniform(1.08, 1.25)
+            else:
+                # A zero-or-negative max (e.g. a pour/freeze point spec) is
+                # a temperature-like bound where "more negative" is fine —
+                # the old absolute-offset approach is correct here.
+                value = max_v - abs(max_v) * 0.15 - random.uniform(0, max(1.0, abs(max_v) * 0.1))
+                if out_of_spec:
+                    value = max_v + abs(max_v) * 0.2 + random.uniform(0, 1.0)
         else:
             value = round(random.uniform(1, 100), 2)
         return round(value, 2)

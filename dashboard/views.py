@@ -6,7 +6,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
-from catalog.models import Instrument, TestMethod
+from catalog.models import FuelType, Instrument, SpecLimit, TestMethod
 from labtests.models import SampleTest, TestResult
 from samples.models import ChainOfCustodyEntry, Sample
 
@@ -74,19 +74,64 @@ def analytics_index(request):
         row["sample_test__test_method"]: row["n"]
         for row in TestResult.objects.values("sample_test__test_method").annotate(n=Count("id"))
     }
+
+    # Last-N values per method (chronological) for the index-page sparkline,
+    # plus a pass-rate so the list surfaces which methods need attention
+    # without opening each one.
+    method_ids = [m.id for m in methods if method_counts.get(m.id, 0)]
+    results_by_method = defaultdict(list)
+    recent_results = (
+        TestResult.objects.filter(sample_test__test_method_id__in=method_ids)
+        .select_related("sample_test")
+        .order_by("entered_at")
+    )
+    for r in recent_results:
+        results_by_method[r.sample_test.test_method_id].append(r)
+
     for m in methods:
-        m.result_count = method_counts.get(m.id, 0)
+        rows = results_by_method.get(m.id, [])
+        m.result_count = len(rows)
+        m.sparkline = [r.value for r in rows[-12:]]
+        pass_n = sum(1 for r in rows if r.pass_fail is True)
+        fail_n = sum(1 for r in rows if r.pass_fail is False)
+        graded = pass_n + fail_n
+        m.pass_rate = round(100 * pass_n / graded) if graded else None
+        m.fail_count = fail_n
+        m.last_verdict = rows[-1].pass_fail if rows else None
+
     return render(request, "dashboard/analytics_index.html", {"methods": methods})
 
 
 @login_required
 def analytics_trend(request, method_id):
     method = get_object_or_404(TestMethod, pk=method_id)
-    results = (
-        TestResult.objects.filter(sample_test__test_method=method)
-        .select_related("sample_test__sample")
-        .order_by("entered_at")
-    )
+    all_spec_limits = list(method.spec_limits.select_related("fuel_type").all())
+
+    # A TestMethod can be shared across fuel types with very different
+    # acceptance ranges (e.g. Density at 15C spans ~500-1010 kg/m3 across
+    # LPG through residual fuel oil) — pooling every result into one
+    # mean/stdev/control-chart regardless of fuel type mixes populations
+    # that aren't comparable. Trend by fuel type instead, defaulting to
+    # whichever fuel type actually has the most results on file.
+    fuel_result_counts = {
+        row["sample_test__sample__fuel_type"]: row["n"]
+        for row in TestResult.objects.filter(sample_test__test_method=method)
+        .values("sample_test__sample__fuel_type")
+        .annotate(n=Count("id"))
+    }
+    fuel_types_with_data = list(FuelType.objects.filter(id__in=fuel_result_counts.keys()).order_by("name"))
+
+    selected_fuel = None
+    fuel_code = request.GET.get("fuel")
+    if fuel_code:
+        selected_fuel = next((f for f in fuel_types_with_data if f.code == fuel_code), None)
+    if selected_fuel is None and fuel_types_with_data:
+        selected_fuel = max(fuel_types_with_data, key=lambda f: fuel_result_counts.get(f.id, 0))
+
+    results_qs = TestResult.objects.filter(sample_test__test_method=method)
+    if selected_fuel is not None:
+        results_qs = results_qs.filter(sample_test__sample__fuel_type=selected_fuel)
+    results = results_qs.select_related("sample_test__sample").order_by("entered_at")
 
     points = []
     values = []
@@ -103,7 +148,10 @@ def analytics_trend(request, method_id):
 
     mean = round(statistics.mean(values), 4) if values else None
     stdev = round(statistics.pstdev(values), 4) if len(values) > 1 else 0
-    fuel_types = list(method.spec_limits.select_related("fuel_type").all())
+
+    spec = None
+    if selected_fuel is not None:
+        spec = SpecLimit.objects.filter(test_method=method, fuel_type=selected_fuel).first()
 
     context = {
         "method": method,
@@ -114,7 +162,11 @@ def analytics_trend(request, method_id):
         "lcl2": round(mean - 2 * stdev, 4) if mean is not None else None,
         "ucl3": round(mean + 3 * stdev, 4) if mean is not None else None,
         "lcl3": round(mean - 3 * stdev, 4) if mean is not None else None,
-        "fuel_types": fuel_types,
+        "spec_min": spec.min_value if spec else None,
+        "spec_max": spec.max_value if spec else None,
+        "fuel_types": all_spec_limits,
+        "fuel_types_with_data": fuel_types_with_data,
+        "selected_fuel": selected_fuel,
         "pass_count": sum(1 for p in points if p["pass_fail"] is True),
         "fail_count": sum(1 for p in points if p["pass_fail"] is False),
     }

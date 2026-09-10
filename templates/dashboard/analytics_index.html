@@ -1,23 +1,72 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Analytics · {{ SITE_NAME }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <h1>Data analysis</h1>
-    <p class="subtitle">Trend and control charts by test method.</p>
+    <p class="subtitle">Trend and control charts by test method — sparkline shows the most recent results at a glance.</p>
   </div>
 </div>
 <div class="card">
   <table>
-    <tr><th>Test method</th><th>Standard</th><th>Results on file</th><th></th></tr>
+    <tr><th>Test method</th><th>Standard</th><th>Recent trend</th><th>Results on file</th><th>Pass rate</th><th></th></tr>
     {% for m in methods %}
     <tr>
       <td>{{ m.name }}</td>
       <td class="muted">{{ m.standard_reference }}</td>
+      <td>
+        {% if m.sparkline|length > 1 %}
+        <canvas class="sparkline" data-values="{{ m.sparkline|join:',' }}" data-last-verdict="{{ m.last_verdict|yesno:'pass,fail,unknown' }}" width="110" height="30"></canvas>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
       <td>{{ m.result_count }}</td>
+      <td>
+        {% if m.pass_rate is not None %}
+        <span class="rate-pill {% if m.fail_count == 0 %}rate-good{% elif m.pass_rate >= 80 %}rate-warn{% else %}rate-bad{% endif %}">
+          {{ m.pass_rate }}% pass{% if m.fail_count %} · {{ m.fail_count }} out of spec{% endif %}
+        </span>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
       <td>{% if m.result_count %}<a href="{% url 'dashboard:analytics_trend' m.pk %}" class="btn small">View trend</a>{% else %}<span class="muted">No data yet</span>{% endif %}</td>
     </tr>
     {% endfor %}
   </table>
 </div>
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+  document.querySelectorAll('canvas.sparkline').forEach(function (canvas) {
+    var values = canvas.dataset.values.split(',').map(Number);
+    var verdict = canvas.dataset.lastVerdict;
+    var dotColor = verdict === 'fail' ? '#c62a21' : verdict === 'pass' ? '#1f9d55' : '#9a9dab';
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: values.map(function (_, i) { return i; }),
+        datasets: [{
+          data: values,
+          borderColor: '#333750',
+          borderWidth: 1.5,
+          pointRadius: values.map(function (_, i) { return i === values.length - 1 ? 3 : 0; }),
+          pointBackgroundColor: dotColor,
+          tension: 0.2,
+          fill: false,
+        }],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } },
+        elements: { line: { borderJoinStyle: 'round' } },
+      },
+    });
+  });
+})();
+</script>
 {% endblock %}
