@@ -116,6 +116,16 @@ TEST_METHODS = [
     # finished fuels, and is reported as % mass, not mg/kg, to match how
     # crude assays (e.g. "sweet" vs. "sour") are actually quoted.
     ("SULF-D4294", "Sulfur Content (X-ray Fluorescence)", "ASTM D4294", "% mass"),
+    # Jet A-1's particulate-matter check is a dedicated line-sampling method
+    # (DEF STAN 91-091 cites D2276/D5452/IP423 interchangeably) reported in
+    # mg/L — a different apparatus and unit than the extraction-based D473
+    # sediment test used on heavier fuel oils, so it gets its own code.
+    ("PART-D2276", "Particulate Matter Content", "ASTM D2276", "mg/L"),
+    # Crude oil's distillation curve is run under vacuum/at multiple cuts
+    # (True Boiling Point analysis) rather than a single atmospheric D86
+    # run — a genuinely different method from every other distillation
+    # entry in this catalog.
+    ("DIST-D2892", "Distillation, True Boiling Point (TBP)", "ASTM D2892", "°C"),
 ]
 
 # fuel_code -> {test_code: (min, max)}
@@ -132,8 +142,26 @@ SPEC_LIMITS = {
         # markets like Thailand): T10 <= 50C, FBP <= 210C.
         "DIST10-D86": (None, 50.0),
         "DISTFBP-D86": (None, 210.0),
-        # No formal IBP spec on file yet — recorded, not auto pass/fail.
-        "DIST-IBP-D86": (None, None),
+        # EN 228 doesn't fix an IBP number (only T10/E-points/FBP are
+        # graded) — this is the typical real-world operating range reported
+        # on gasoline certificates of quality, not an EN 228 pass/fail limit.
+        "DIST-IBP-D86": (30.0, 45.0),
+        # Gasoline's flash point is a fixed physical property of such a
+        # volatile fuel (well below ambient) — EN 228/ASTM D4814 don't grade
+        # it as a pass/fail spec (RVP governs volatility instead). Typical
+        # SDS-reported range for finished motor gasoline, informational only.
+        "FLASH-D56": (-45.0, -20.0),
+        # EN 228 sets no numeric water content — only a visual "clear and
+        # bright, free from water" requirement. Typical trace figure some
+        # labs track informationally, not an EN 228 pass/fail number.
+        "WATER-D6304": (None, 100.0),
+        # No universal conductivity spec for motor gasoline (unlike Jet
+        # A-1's mandatory static-dissipator range) — recorded only where a
+        # static-dissipator additive is dosed for pipeline/terminal safety.
+        "COND-D2624": (None, None),
+        # EN 228 sets no numeric sediment/particulate limit for gasoline.
+        # Typical trace figure, informational only.
+        "SED-D473": (None, 0.01),
     },
     "GAS91": {
         "RON-D2699": (91.0, None),
@@ -143,7 +171,11 @@ SPEC_LIMITS = {
         "DENS-D1298": (715.0, 770.0),
         "DIST10-D86": (None, 50.0),
         "DISTFBP-D86": (None, 210.0),
-        "DIST-IBP-D86": (None, None),
+        "DIST-IBP-D86": (30.0, 45.0),
+        "FLASH-D56": (-45.0, -20.0),
+        "WATER-D6304": (None, 100.0),
+        "COND-D2624": (None, None),
+        "SED-D473": (None, 0.01),
     },
     # EN 590 (European automotive diesel standard, widely followed across
     # Asia-Pacific export/import markets) — every limit below matches EN 590
@@ -161,9 +193,16 @@ SPEC_LIMITS = {
         "DENS-D1298": (820.0, 845.0),
         # Sediment/particulate contamination screen for AGO handling & storage.
         "SED-D473": (None, 0.01),
-        # No formal IBP/FBP spec on file yet — recorded, not auto pass/fail.
-        "DIST-IBP-D86": (None, None),
-        "DISTFBP-D86": (None, None),
+        # Neither EN 590 nor ASTM D975 grades diesel's IBP/FBP (only T95 is
+        # an official limit, above) — these are typical real-world ranges
+        # from refinery/ULSD certificates of quality, not a regulatory
+        # pass/fail band.
+        "DIST-IBP-D86": (160.0, 200.0),
+        "DISTFBP-D86": (340.0, 370.0),
+        # Not an EN 590 number itself — common terminal/pipeline practice for
+        # static-safety during switch-loading (min conductivity so charge
+        # dissipates rather than building up). Informational.
+        "COND-D2624": (25.0, None),
     },
     "JETA1": {
         "FLASH-D56": (38.0, None),
@@ -178,12 +217,31 @@ SPEC_LIMITS = {
         "COND-D2624": (50.0, 600.0),
         "DIST10-D86": (None, 205.0),
         "DISTFBP-D86": (None, 300.0),
-        "DIST-IBP-D86": (None, None),
+        # DEF STAN/D1655 don't grade Jet A-1's IBP — this is the typical
+        # real-world range from Jet A-1 certificates of quality.
+        "DIST-IBP-D86": (150.0, 170.0),
+        # DEF STAN 91-091/D1655 don't set a numeric water content limit —
+        # water is controlled by coalescer filtration and checked with a
+        # free-water detector / Microseparometer rating, not graded by KF
+        # ppm. Recorded for trend monitoring only.
+        "WATER-D6304": (None, None),
+        # DEF STAN 91-091 particulate matter limit at point of manufacture
+        # (line-sampling method) — real published figure, not typical/range.
+        "PART-D2276": (None, 1.0),
     },
     # ASTM D6751 (flash point, viscosity, cetane) blended with EN 14214
     # (water content, density — the European biodiesel standard, also
     # widely followed across Asia-Pacific) — a common real-world combination
     # for a blend stock destined for both markets.
+    #
+    # Deliberately NO ASTM D86 (atmospheric distillation) entries here: FAME
+    # esters boil far higher (~330-350C) than D86's atmospheric-pressure
+    # range can measure without decomposing the sample. D6751 doesn't
+    # require or even permit a D86 IBP/FBP for B100 — biodiesel's boiling
+    # range, when tested at all, is measured by ASTM D1160 (distillation at
+    # reduced pressure) or D7398 (GC simulated distillation), not D86. So
+    # unlike every other fuel type here, B100 has no distillation entry —
+    # that's correct, not a missing spec.
     "B100": {
         "DENS-D4052": (860.0, 900.0),
         "FLASH-D93": (93.0, None),
@@ -197,9 +255,8 @@ SPEC_LIMITS = {
         "CETANE-D613": (47.0, None),
         "DENS-D1298": (860.0, 900.0),
         "SED-D473": (None, 0.01),
-        # No formal IBP/FBP spec on file yet — recorded, not auto pass/fail.
-        "DIST-IBP-D86": (None, None),
-        "DISTFBP-D86": (None, None),
+        # No biodiesel conductivity spec on file. Recorded only.
+        "COND-D2624": (None, None),
     },
     # ASTM D3699 No. 1-K (higher-quality illuminating/heating grade — matches
     # this fuel type's own description) plus DEF STAN/D1655-derived
@@ -212,7 +269,16 @@ SPEC_LIMITS = {
         "DENS-D1298": (775.0, 840.0),
         "DIST10-D86": (None, 205.0),
         "DISTFBP-D86": (None, 300.0),
-        "DIST-IBP-D86": (None, None),
+        # D3699 doesn't fix Kerosene's IBP either — typical range, sharing
+        # a similar boiling profile to Jet A-1/kerosene-type fuel.
+        "DIST-IBP-D86": (150.0, 175.0),
+        # D3699 sets no numeric water content or sediment limit for
+        # kerosene — both are checked by visual "clear and bright" only, and
+        # there's no conductivity requirement either (unlike Jet A-1's
+        # mandatory static-dissipator range). All three recorded only.
+        "WATER-D6304": (None, None),
+        "COND-D2624": (None, None),
+        "SED-D473": (None, None),
     },
     # ISO 8217:2017 Table 2, grade ISO-F-RMG 380 (residual/heavy fuel oil).
     # Sulfur uses the IMO 2020 global sulphur cap (0.50% m/m outside an
@@ -224,6 +290,23 @@ SPEC_LIMITS = {
         "WATER-D95": (None, 0.50),
         "FLASH-D93": (60.0, None),
         "SULF-D5453": (None, 5000.0),
+        # Residual fuel's low-temperature workability is graded by Pour
+        # Point (waxy solidification), not "freezing point" (a distinct
+        # aviation-fuel crystallization test — see Jet A-1). ISO 8217:2017
+        # RMG 380 pour point (ISO 3016; D97 is the ASTM-equivalent method):
+        # summer-quality max 0°C (used here), winter-quality is stricter at
+        # max -6°C.
+        "POUR-D97": (None, 0.0),
+        # No universal conductivity spec for residual fuel (it's a
+        # combustion fuel, not subject to Jet A-1's aircraft static-safety
+        # requirement). Recorded only.
+        "COND-D2624": (None, None),
+        # ISO 8217 grades "Total Sediment" via its own existent/potential
+        # test (not modeled here); D473 (literally titled "Sediment in
+        # Crude Oils and Fuel Oils by Extraction") is a legitimate
+        # supplementary extraction-method check on residual fuel, recorded
+        # for traceability.
+        "SED-D473": (None, None),
     },
     # ISO 8217:2017 Table 1, grade ISO-F-DMA (marine gas oil). Sulfur uses
     # the stricter Emission Control Area limit (0.10% m/m) since that's the
@@ -237,13 +320,27 @@ SPEC_LIMITS = {
         # No confirmed international water-content cap on file for DMA —
         # recorded, not auto pass/fail.
         "WATER-D6304": (None, None),
+        # No universal conductivity spec for DMA. Recorded only.
+        "COND-D2624": (None, None),
+        # ISO 8217's closest real DMA parameter is Micro Carbon Residue
+        # (not modeled here), not a D473-style sediment number — typical
+        # trace figure, similar to distillate road diesel, informational.
+        "SED-D473": (None, 0.01),
     },
     # EN 589:2024 automotive LPG. No density limit is set by the standard
     # (it's a composition-driven spec) — recorded for traceability only.
     "LPG": {
         "VAPOR-D1267": (None, 1550.0),
         "SULF-D5453": (None, 30.0),
-        "DENS-D4052": (None, None),
+        # EN 589 doesn't fix a density number (it's composition-driven, a
+        # consequence of the propane/butane ratio rather than an
+        # independently graded property) — typical commercial autogas
+        # blend range (propane ~500-510 kg/m³ to butane ~570-580 kg/m³),
+        # informational.
+        "DENS-D4052": (500.0, 580.0),
+        # LPG's water content is really checked by a visual "free water"
+        # test (ASTM D2713), not Karl Fischer ppm — recorded only.
+        "WATER-D6304": (None, None),
     },
     # ASTM D910 / DEF STAN 91-90 leaded aviation gasoline, grade 100LL.
     "AVGAS100LL": {
@@ -253,6 +350,21 @@ SPEC_LIMITS = {
         "RVP-D5191": (38.0, 49.0),
         "HEAT-D3338": (43.5, None),
         "TEL-D3341": (None, 0.56),
+        # D910 doesn't fix a strict density band (it's reported on the
+        # certificate, not pass/fail) — typical range for an
+        # alkylate/isooctane-based avgas blend, informational.
+        "DENS-D4052": (690.0, 710.0),
+        # Avgas's flash point is a fixed physical property of such a
+        # volatile, gasoline-like fuel — D910 doesn't grade it as a
+        # pass/fail spec (RVP governs volatility instead), same reasoning
+        # as motor gasoline. Typical range, informational only.
+        "FLASH-D56": (-45.0, -35.0),
+        # D910 relies on a visual "clear and bright" + free-water check,
+        # not a numeric KF ppm limit. Recorded only.
+        "WATER-D6304": (None, None),
+        # Unlike Jet A-1, D910 doesn't mandate a static-dissipator
+        # conductivity range for avgas. Recorded only.
+        "COND-D2624": (None, None),
     },
     # Crude oil: every value below is recorded for the assay report, not
     # graded pass/fail — there's no single international acceptance number
@@ -271,6 +383,15 @@ SPEC_LIMITS = {
         "TAN-D664": (None, None),
         "H2S-D7621": (None, None),
         "FLASH-D93": (None, None),
+        # Crude's real distillation test is a multi-cut True Boiling Point
+        # assay (run under vacuum for the heavier cuts), not a single D86
+        # atmospheric run — reported as a full curve in a real assay;
+        # recorded here as a representative point for the assay report.
+        # (No separate Karl Fischer/water line: crude's water content is
+        # measured together with sediment via BS&W above, its actual
+        # governing method, not KF titration. No conductivity line either
+        # — that's not a standard crude assay parameter.)
+        "DIST-D2892": (None, None),
     },
 }
 
