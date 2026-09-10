@@ -38,6 +38,10 @@ FUEL_TYPES = [
     ("Jet A-1", "JETA1", "Aviation turbine fuel."),
     ("Biodiesel (B100/FAME)", "B100", "Fatty acid methyl ester biodiesel."),
     ("Kerosene", "KERO", "Illuminating/heating kerosene."),
+    ("Marine Fuel Oil (RMG 380 / HSFO)", "MARINE-HFO", "Residual marine bunker fuel, ISO 8217 grade ISO-F-RMG 380."),
+    ("Marine Gas Oil (DMA)", "MGO", "Distillate marine bunker fuel, ISO 8217 grade ISO-F-DMA."),
+    ("LPG / Autogas", "LPG", "Liquefied petroleum gas for automotive/cylinder use, per EN 589."),
+    ("Aviation Gasoline (Avgas 100LL)", "AVGAS100LL", "Leaded piston-engine aviation fuel, per ASTM D910 / DEF STAN 91-90."),
 ]
 
 # code, name, standard, unit
@@ -47,9 +51,14 @@ TEST_METHODS = [
     ("DENS-D4052", "Density at 15°C", "ASTM D4052", "kg/m³"),
     ("SULF-D5453", "Sulfur Content (UV Fluorescence)", "ASTM D5453", "mg/kg"),
     ("DIST-D86", "Distillation, T95", "ASTM D86", "°C"),
+    ("DIST-IBP-D86", "Distillation, Initial Boiling Point (IBP)", "ASTM D86", "°C"),
     ("RVP-D5191", "Reid Vapor Pressure", "ASTM D5191", "kPa"),
     ("WATER-D6304", "Water Content (Karl Fischer)", "ASTM D6304", "mg/kg"),
     ("VISC-D445", "Kinematic Viscosity at 40°C", "ASTM D445", "mm²/s"),
+    # Jet A-1's viscosity limit (DEF STAN 91-091 / ASTM D1655) is measured at
+    # -20°C, not 40°C — a distinct method so the recorded test condition is
+    # accurate, not just a relabeled version of the 40°C fuel-oil test.
+    ("VISC-D445-LOW", "Kinematic Viscosity at -20°C", "ASTM D445", "mm²/s"),
     ("CETANE-D613", "Cetane Number", "ASTM D613", "—"),
     ("RON-D2699", "Research Octane Number", "ASTM D2699", "RON"),
     ("CLOUD-D2500", "Cloud Point", "ASTM D2500", "°C"),
@@ -62,6 +71,23 @@ TEST_METHODS = [
     ("COND-D2624", "Electrical Conductivity", "ASTM D2624", "pS/m"),
     ("DIST10-D86", "Distillation, 10% Recovered", "ASTM D86", "°C"),
     ("DISTFBP-D86", "Distillation, Final Boiling Point", "ASTM D86", "°C"),
+    # Added for the new marine/LPG/avgas fuel types — each is a genuinely
+    # distinct international method, not a relabeled version of an existing
+    # one, because the test condition or apparatus actually differs:
+    #  - Residual marine fuel viscosity is graded at 50C (ISO 3104), not 40C.
+    ("VISC-D445-50", "Kinematic Viscosity at 50°C", "ASTM D445", "mm²/s"),
+    #  - Water in dark residual fuel oil is read by distillation (Dean-Stark),
+    #    not Karl Fischer — Karl Fischer titration is unreliable on fuels
+    #    with this much colour/particulate.
+    ("WATER-D95", "Water Content (Distillation Method)", "ASTM D95", "% vol"),
+    #  - LPG's vapour pressure is measured on liquefied gas via the
+    #    LP-Gas method, not the D5191 mini-method built for gasoline.
+    ("VAPOR-D1267", "Vapor Pressure (LPG)", "ASTM D1267", "kPa"),
+    #  - Avgas is graded by Motor Octane Number (Motor Method), not the
+    #    Research Method (RON-D2699) used for automotive gasoline.
+    ("MON-D2700", "Motor Octane Number", "ASTM D2700", "MON"),
+    ("HEAT-D3338", "Net Heat of Combustion", "ASTM D3338", "MJ/kg"),
+    ("TEL-D3341", "Tetraethyl Lead Content", "ASTM D3341", "g Pb/L"),
 ]
 
 # fuel_code -> {test_code: (min, max)}
@@ -74,9 +100,12 @@ SPEC_LIMITS = {
         # D1298 is the manual-hydrometer equivalent of D4052 — same
         # physical property, same acceptance range.
         "DENS-D1298": (720.0, 775.0),
-        # ASTM D4814 volatility-class-representative limits.
-        "DIST10-D86": (None, 70.0),
-        "DISTFBP-D86": (None, 225.0),
+        # EN 228 (widely followed across Europe/Asia-Pacific, incl. RON-graded
+        # markets like Thailand): T10 <= 50C, FBP <= 210C.
+        "DIST10-D86": (None, 50.0),
+        "DISTFBP-D86": (None, 210.0),
+        # No formal IBP spec on file yet — recorded, not auto pass/fail.
+        "DIST-IBP-D86": (None, None),
     },
     "GAS91": {
         "RON-D2699": (91.0, None),
@@ -84,9 +113,14 @@ SPEC_LIMITS = {
         "SULF-D5453": (None, 10.0),
         "RVP-D5191": (45.0, 60.0),
         "DENS-D1298": (715.0, 770.0),
-        "DIST10-D86": (None, 70.0),
-        "DISTFBP-D86": (None, 225.0),
+        "DIST10-D86": (None, 50.0),
+        "DISTFBP-D86": (None, 210.0),
+        "DIST-IBP-D86": (None, None),
     },
+    # EN 590 (European automotive diesel standard, widely followed across
+    # Asia-Pacific export/import markets) — every limit below matches EN 590
+    # exactly, which is why the cetane/sulfur numbers read tighter than the
+    # (looser) US ASTM D975 No. 2-D minimums.
     "DIESEL": {
         "CETANE-D613": (51.0, None),
         "DENS-D4052": (820.0, 845.0),
@@ -99,35 +133,98 @@ SPEC_LIMITS = {
         "DENS-D1298": (820.0, 845.0),
         # Sediment/particulate contamination screen for AGO handling & storage.
         "SED-D473": (None, 0.01),
+        # No formal IBP/FBP spec on file yet — recorded, not auto pass/fail.
+        "DIST-IBP-D86": (None, None),
+        "DISTFBP-D86": (None, None),
     },
     "JETA1": {
         "FLASH-D56": (38.0, None),
         "DENS-D4052": (775.0, 840.0),
         "SULF-D5453": (None, 3000.0),
-        "VISC-D445": (None, 8.0),
+        # Jet A-1 viscosity is specified at -20C, not the 40C fuel-oil
+        # condition — see VISC-D445-LOW above.
+        "VISC-D445-LOW": (None, 8.0),
         "DENS-D1298": (775.0, 840.0),
         # DEF STAN 91-091 / ASTM D1655 Jet A-1 limits.
         "FREEZE-D2386": (None, -47.0),
         "COND-D2624": (50.0, 600.0),
         "DIST10-D86": (None, 205.0),
         "DISTFBP-D86": (None, 300.0),
+        "DIST-IBP-D86": (None, None),
     },
+    # ASTM D6751 (flash point, viscosity, cetane) blended with EN 14214
+    # (water content, density — the European biodiesel standard, also
+    # widely followed across Asia-Pacific) — a common real-world combination
+    # for a blend stock destined for both markets.
     "B100": {
         "DENS-D4052": (860.0, 900.0),
         "FLASH-D93": (93.0, None),
-        "SULF-D5453": (None, 10.0),
+        # D6751 "S15" blending grade (<=15 mg/kg) — the sulfur cap required
+        # so the blended finished diesel can still meet its own <=10 mg/kg
+        # (EN 590) or <=15 mg/kg (US S15) limit.
+        "SULF-D5453": (None, 15.0),
         "WATER-D6304": (None, 500.0),
-        "VISC-D445": (3.5, 5.0),
+        # Full ASTM D6751 allowable range; not narrowed to an internal target.
+        "VISC-D445": (1.9, 6.0),
+        "CETANE-D613": (47.0, None),
         "DENS-D1298": (860.0, 900.0),
         "SED-D473": (None, 0.01),
+        # No formal IBP/FBP spec on file yet — recorded, not auto pass/fail.
+        "DIST-IBP-D86": (None, None),
+        "DISTFBP-D86": (None, None),
     },
+    # ASTM D3699 No. 1-K (higher-quality illuminating/heating grade — matches
+    # this fuel type's own description) plus DEF STAN/D1655-derived
+    # distillation points shared with Jet A-1's similar boiling range.
     "KERO": {
         "FLASH-D56": (38.0, None),
         "DENS-D4052": (775.0, 840.0),
-        "SULF-D5453": (None, 2000.0),
+        # No. 1-K grade: <=0.04% mass = 400 mg/kg (No. 2-K would be <=3000).
+        "SULF-D5453": (None, 400.0),
         "DENS-D1298": (775.0, 840.0),
         "DIST10-D86": (None, 205.0),
         "DISTFBP-D86": (None, 300.0),
+        "DIST-IBP-D86": (None, None),
+    },
+    # ISO 8217:2017 Table 2, grade ISO-F-RMG 380 (residual/heavy fuel oil).
+    # Sulfur uses the IMO 2020 global sulphur cap (0.50% m/m outside an
+    # Emission Control Area) since ISO 8217 itself defers to "statutory
+    # requirements" rather than setting its own number.
+    "MARINE-HFO": {
+        "VISC-D445-50": (None, 380.0),
+        "DENS-D4052": (None, 1010.0),
+        "WATER-D95": (None, 0.50),
+        "FLASH-D93": (60.0, None),
+        "SULF-D5453": (None, 5000.0),
+    },
+    # ISO 8217:2017 Table 1, grade ISO-F-DMA (marine gas oil). Sulfur uses
+    # the stricter Emission Control Area limit (0.10% m/m) since that's the
+    # grade most commonly supplied/traded today regardless of routing.
+    "MGO": {
+        "DENS-D4052": (None, 890.0),
+        "VISC-D445": (2.0, 6.0),
+        "FLASH-D93": (60.0, None),
+        "CETANE-D613": (40.0, None),
+        "SULF-D5453": (None, 1000.0),
+        # No confirmed international water-content cap on file for DMA —
+        # recorded, not auto pass/fail.
+        "WATER-D6304": (None, None),
+    },
+    # EN 589:2024 automotive LPG. No density limit is set by the standard
+    # (it's a composition-driven spec) — recorded for traceability only.
+    "LPG": {
+        "VAPOR-D1267": (None, 1550.0),
+        "SULF-D5453": (None, 30.0),
+        "DENS-D4052": (None, None),
+    },
+    # ASTM D910 / DEF STAN 91-90 leaded aviation gasoline, grade 100LL.
+    "AVGAS100LL": {
+        "FREEZE-D2386": (None, -58.0),
+        "SULF-D5453": (None, 500.0),
+        "MON-D2700": (99.6, None),
+        "RVP-D5191": (38.0, 49.0),
+        "HEAT-D3338": (43.5, None),
+        "TEL-D3341": (None, 0.56),
     },
 }
 

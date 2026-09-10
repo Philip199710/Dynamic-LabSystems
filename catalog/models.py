@@ -48,8 +48,16 @@ class SpecLimit(models.Model):
         return f"{self.test_method.code} / {self.fuel_type.code}: [{self.min_value}, {self.max_value}]"
 
     def evaluate(self, value):
-        """Return True if value is within spec, False if out of spec, None if unknown."""
+        """Return True if value is within spec, False if out of spec, None if unknown.
+
+        A SpecLimit with both bounds blank isn't really a spec — it exists only
+        to make a test method assignable/recordable for a fuel type that has no
+        formal acceptance range on file for it yet. Treat that case as "no spec"
+        (None) rather than an automatic pass.
+        """
         if value is None:
+            return None
+        if self.min_value is None and self.max_value is None:
             return None
         if self.min_value is not None and value < self.min_value:
             return False
