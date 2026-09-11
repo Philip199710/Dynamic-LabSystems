@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Instruments · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Instruments</h1>
+    <p class="subtitle">Lab equipment registry and calibration status.</p>
+  </div>
+</div>
+<div class="card">
+  <table>
+    <tr><th>Instrument</th><th>Type</th><th>Serial</th><th>Status</th><th>Last calibrated</th><th>Calibration due</th><th></th></tr>
+    {% for i in instruments %}
+    <tr>
+      <td><a href="{% url 'catalog:instrument_detail' i.pk %}">{{ i.name }}</a></td>
+      <td class="muted">{{ i.instrument_type|default:"—" }}</td>
+      <td class="muted">{{ i.serial_number|default:"—" }}</td>
+      <td><span class="badge {% if i.status == 'ACTIVE' %}complete{% else %}disposed{% endif %}">{{ i.get_status_display }}</span></td>
+      <td>{{ i.last_calibrated_at|default:"—" }}</td>
+      <td{% if i.calibration_overdue %} style="color:#c62a21;font-weight:600;"{% endif %}>
+        {{ i.calibration_due_date|default:"—" }}{% if i.calibration_overdue %} <span class="badge fail">OVERDUE</span>{% endif %}
+      </td>
+      <td><a href="{% url 'catalog:instrument_detail' i.pk %}" class="btn small secondary">View</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7"><p class="empty">No instruments on file.</p></td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

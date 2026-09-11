@@ -21,6 +21,7 @@
         <a href="{% url 'samples:list' %}">Samples</a>
         <a href="{% url 'labtests:my_worklist' %}">My worklist</a>
         <a href="{% url 'dashboard:analytics_index' %}">Analytics</a>
+        <a href="{% url 'catalog:instrument_list' %}">Instruments</a>
         {% if perms.accounts.change_clientprofile %}<a href="{% url 'accounts:pending_clients' %}">Client approvals</a>{% endif %}
         {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
       {% endif %}

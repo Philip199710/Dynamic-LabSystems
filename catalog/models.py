@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -90,6 +91,13 @@ class Instrument(models.Model):
     serial_number = models.CharField(max_length=100, blank=True)
     location = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    # Both of these are a cache of the latest CalibrationRecord below, kept
+    # in sync by CalibrationRecord.save() — they exist as real columns (not
+    # just a property) so the dashboard's "overdue" query stays a plain
+    # QuerySet filter. Hand-editing them directly (e.g. in /admin) still
+    # works, but recording a calibration is the real, auditable way to move
+    # them — see sync_calibration_cache().
+    last_calibrated_at = models.DateField(null=True, blank=True)
     calibration_due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
@@ -104,3 +112,55 @@ class Instrument(models.Model):
         from django.utils import timezone
 
         return bool(self.calibration_due_date and self.calibration_due_date < timezone.localdate())
+
+    def sync_calibration_cache(self):
+        """Refresh last_calibrated_at/calibration_due_date from calibration history.
+
+        Uses the most recently *performed* record (not most recently
+        entered) so backdating or correcting an earlier calibration entry
+        still resolves to the right cached values.
+        """
+        latest = self.calibration_records.order_by("-performed_at", "-created_at").first()
+        self.last_calibrated_at = latest.performed_at if latest else None
+        self.calibration_due_date = latest.next_due_date if latest else None
+        self.save(update_fields=["last_calibrated_at", "calibration_due_date"])
+
+
+class CalibrationRecord(models.Model):
+    """One logged calibration event for an instrument.
+
+    This is the real audit trail: rather than one hand-edited due-date
+    field on Instrument, every calibration performed gets its own row here
+    (who did it, when, against what certificate/work order, and when it's
+    next due). Instrument.last_calibrated_at/calibration_due_date are kept
+    as a denormalized cache of the latest record for fast dashboard
+    queries — see sync_calibration_cache().
+    """
+
+    instrument = models.ForeignKey(Instrument, on_delete=models.CASCADE, related_name="calibration_records")
+    performed_at = models.DateField(help_text="Date the calibration was actually performed")
+    next_due_date = models.DateField(
+        null=True, blank=True, help_text="Leave blank if this instrument doesn't need recurring calibration"
+    )
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="calibrations_performed",
+    )
+    certificate_reference = models.CharField(
+        max_length=100, blank=True, help_text="Calibration certificate or work order number, if any"
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-performed_at", "-created_at"]
+
+    def __str__(self):
+        return f"{self.instrument.name} calibrated {self.performed_at}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.instrument.sync_calibration_cache()

@@ -43,7 +43,7 @@ def sample_create(request):
 @login_required
 def sample_detail(request, pk):
     sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
-    tests = sample.tests.select_related("test_method", "assigned_to").all()
+    tests = sample.tests.select_related("test_method", "assigned_to", "testresult", "testresult__instrument").all()
     custody_log = sample.custody_log.select_related("actor").all()
     assign_form = AssignTestForm(sample=sample)
     # Only offer methods that actually have a spec limit on file for this

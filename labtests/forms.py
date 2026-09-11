@@ -1,5 +1,7 @@
 from django import forms
 
+from catalog.models import Instrument
+
 from .models import SampleTest, TestResult
 
 
@@ -36,5 +38,19 @@ class AssignTestForm(forms.ModelForm):
 class ResultEntryForm(forms.ModelForm):
     class Meta:
         model = TestResult
-        fields = ["value", "replicate_values", "notes"]
+        fields = ["value", "instrument", "replicate_values", "notes"]
         widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # No strict test-method-to-instrument mapping exists in the catalog
+        # (instrument_type is a free-text hint, not a formal link), so this
+        # offers every active instrument rather than guessing a match —
+        # the analyst picks the one they actually used. Out-of-service
+        # instruments are excluded since a result shouldn't be attributed
+        # to equipment that's flagged as unusable.
+        field = self.fields["instrument"]
+        field.queryset = Instrument.objects.filter(status=Instrument.STATUS_ACTIVE).order_by("name")
+        field.required = False
+        field.empty_label = "— not recorded —"
+        field.label_from_instance = lambda i: f"{i.name} ({i.instrument_type})" if i.instrument_type else i.name

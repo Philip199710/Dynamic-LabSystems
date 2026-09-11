@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ instrument.name }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ instrument.name }} <span class="badge {% if instrument.status == 'ACTIVE' %}complete{% else %}disposed{% endif %}">{{ instrument.get_status_display }}</span></h1>
+    <p class="subtitle">{{ instrument.instrument_type|default:"—" }} &middot; serial {{ instrument.serial_number|default:"—" }} &middot; {{ instrument.location|default:"—" }}</p>
+  </div>
+  <a href="{% url 'catalog:instrument_list' %}" class="btn secondary">&larr; All instruments</a>
+</div>
+
+<div class="grid cols-3">
+  <div class="card stat"><div class="n">{{ instrument.last_calibrated_at|default:"—" }}</div><div class="l">Last calibrated</div></div>
+  <div class="card stat">
+    <div class="n"{% if instrument.calibration_overdue %} style="color:#c62a21;"{% endif %}>{{ instrument.calibration_due_date|default:"—" }}</div>
+    <div class="l">Calibration due{% if instrument.calibration_overdue %} — OVERDUE{% endif %}</div>
+  </div>
+  <div class="card stat"><div class="n">{{ results_count }}</div><div class="l">Results recorded with this instrument</div></div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="section-title">Calibration history</div>
+    {% if records %}
+    <table class="compact">
+      <tr><th>Performed</th><th>Next due</th><th>By</th><th>Certificate / ref</th><th>Notes</th></tr>
+      {% for r in records %}
+      <tr>
+        <td style="white-space:nowrap;">{{ r.performed_at }}</td>
+        <td style="white-space:nowrap;">{{ r.next_due_date|default:"—" }}</td>
+        <td>{{ r.performed_by.get_username|default:"—" }}</td>
+        <td class="muted">{{ r.certificate_reference|default:"—" }}</td>
+        <td class="muted">{{ r.notes|default:"" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty">No calibration recorded yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Record a calibration</div>
+    {% if perms.catalog.add_calibrationrecord %}
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+        {{ field.errors }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn">Save calibration</button>
+    </form>
+    {% else %}
+    <p class="empty">Recording a calibration requires Lab Manager or QA access.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Recent results recorded with this instrument</div>
+  {% if results_using %}
+  <table class="compact">
+    <tr><th>Sample</th><th>Test</th><th>Value</th><th>Verdict</th><th>Entered</th><th>In calibration?</th></tr>
+    {% for r in results_using %}
+    <tr>
+      <td><a href="{% url 'samples:detail' r.sample_test.sample_id %}">{{ r.sample_test.sample.sample_id }}</a></td>
+      <td>{{ r.sample_test.test_method.name }}</td>
+      <td>{{ r.value }} {{ r.sample_test.test_method.unit }}</td>
+      <td>
+        {% if r.pass_fail == True %}<span class="badge pass">PASS</span>
+        {% elif r.pass_fail == False %}<span class="badge fail">OUT OF SPEC</span>
+        {% else %}<span class="badge unknown">no spec</span>{% endif %}
+      </td>
+      <td class="muted" style="white-space:nowrap;">{{ r.entered_at|date:"M j, Y H:i" }}</td>
+      <td>
+        {% if r.instrument_in_calibration == True %}<span class="badge pass">yes</span>
+        {% elif r.instrument_in_calibration == False %}<span class="badge fail">overdue at test time</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No results have been recorded with this instrument yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

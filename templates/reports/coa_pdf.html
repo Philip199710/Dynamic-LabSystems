@@ -123,6 +123,7 @@
       <th>Result</th>
       <th>Spec limit</th>
       <th>Verdict</th>
+      <th>Instrument</th>
     </tr>
     {% for row in rows %}
     <tr>
@@ -133,6 +134,10 @@
       <td>
         {% if row.verdict == True %}<span class="pass">PASS</span>
         {% elif row.verdict == False %}<span class="fail">OUT OF SPEC</span>
+        {% else %}<span class="unknown">—</span>{% endif %}
+      </td>
+      <td>
+        {% if row.instrument %}{{ row.instrument.name }}{% if row.instrument_in_calibration == False %}<br><span class="fail">cal. overdue at test</span>{% endif %}
         {% else %}<span class="unknown">—</span>{% endif %}
       </td>
     </tr>

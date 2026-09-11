@@ -83,9 +83,13 @@
 <div class="card">
   <div class="section-title">Instruments overdue for calibration</div>
   <table class="compact">
-    <tr><th>Instrument</th><th>Type</th><th>Calibration due</th></tr>
+    <tr><th>Instrument</th><th>Type</th><th>Calibration due</th><th></th></tr>
     {% for i in instruments_due %}
-    <tr><td>{{ i.name }}</td><td>{{ i.instrument_type }}</td><td>{{ i.calibration_due_date }}</td></tr>
+    <tr>
+      <td>{{ i.name }}</td><td class="muted">{{ i.instrument_type }}</td>
+      <td style="color:#c62a21;font-weight:600;">{{ i.calibration_due_date }}</td>
+      <td><a href="{% url 'catalog:instrument_detail' i.pk %}" class="btn small secondary">Record calibration</a></td>
+    </tr>
     {% endfor %}
   </table>
 </div>

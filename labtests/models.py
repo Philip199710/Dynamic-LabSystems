@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from catalog.models import SpecLimit, TestMethod
+from catalog.models import Instrument, SpecLimit, TestMethod
 from samples.models import Sample
 
 
@@ -65,6 +65,14 @@ class TestResult(models.Model):
     replicate_values = models.CharField(
         max_length=200, blank=True, help_text="Optional comma-separated replicate readings, e.g. 0.812, 0.814, 0.813"
     )
+    instrument = models.ForeignKey(
+        Instrument,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="test_results",
+        help_text="Which instrument produced this reading, if applicable",
+    )
     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     entered_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
@@ -86,6 +94,30 @@ class TestResult(models.Model):
         if limit is None:
             return None
         return limit.evaluate(self.value)
+
+    @property
+    def instrument_in_calibration(self):
+        """Was the recorded instrument in calibration at the moment this result was entered?
+
+        True/False when there's a calibration history to check it against;
+        None when no instrument was recorded, or no calibration record
+        covers this result's entry date (so there's nothing to flag either
+        way). Looks at the calibration record that was current *at the time
+        the result was entered* — not the instrument's calibration status
+        today — so this stays a correct point-in-time answer even after
+        the instrument has since been recalibrated (or gone overdue since).
+        """
+        if not self.instrument_id or not self.entered_at:
+            return None
+        entered_date = self.entered_at.date() if hasattr(self.entered_at, "date") else self.entered_at
+        record = (
+            self.instrument.calibration_records.filter(performed_at__lte=entered_date)
+            .order_by("-performed_at", "-created_at")
+            .first()
+        )
+        if record is None or record.next_due_date is None:
+            return None
+        return entered_date <= record.next_due_date
 
     def record(self, actor):
         """Persist the result and cascade status/chain-of-custody updates. Call instead of bare .save()."""

@@ -31,7 +31,7 @@ def coa_context(sample):
     Shared by the staff-facing reports views below and the client-portal
     views in accounts.views, so both render the exact same certificate.
     """
-    tests = sample.tests.select_related("test_method", "assigned_to").all()
+    tests = sample.tests.select_related("test_method", "assigned_to", "testresult", "testresult__instrument").all()
     rows = []
     for t in tests:
         result = t.result
@@ -42,6 +42,8 @@ def coa_context(sample):
                 "result": result,
                 "limit": limit,
                 "verdict": result.pass_fail if result else None,
+                "instrument": result.instrument if result else None,
+                "instrument_in_calibration": result.instrument_in_calibration if result else None,
             }
         )
     rows = build_trend_charts(rows)

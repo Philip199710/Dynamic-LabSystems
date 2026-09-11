@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from catalog.models import FuelType, Instrument, SpecLimit, TestMethod
+from catalog.models import CalibrationRecord, FuelType, Instrument, SpecLimit, TestMethod
 from labtests.models import SampleTest, TestResult
 from samples.models import Sample
 
@@ -456,8 +456,8 @@ class Command(BaseCommand):
         fuel_types = self.seed_fuel_types()
         test_methods = self.seed_test_methods()
         self.seed_spec_limits(fuel_types, test_methods)
-        self.seed_instruments()
-        self.seed_samples(fuel_types, test_methods, users)
+        instruments = self.seed_instruments()
+        self.seed_samples(fuel_types, test_methods, users, instruments)
 
         self.stdout.write(self.style.SUCCESS("Demo data seeded."))
         self.stdout.write("Login with any of:")
@@ -539,18 +539,30 @@ class Command(BaseCommand):
 
     def seed_instruments(self):
         today = timezone.localdate()
+        instruments = []
         for name, itype, serial, days_offset in INSTRUMENTS:
-            Instrument.objects.get_or_create(
+            instrument, _ = Instrument.objects.get_or_create(
                 serial_number=serial,
-                defaults={
-                    "name": name,
-                    "instrument_type": itype,
-                    "location": "Main lab",
-                    "calibration_due_date": today + timedelta(days=days_offset),
-                },
+                defaults={"name": name, "instrument_type": itype, "location": "Main lab"},
             )
+            instruments.append(instrument)
+            # calibration_due_date/last_calibrated_at are a cache of the
+            # latest CalibrationRecord (see Instrument.sync_calibration_cache)
+            # — seed one real calibration event per instrument instead of
+            # setting those fields directly, so the demo data matches how
+            # the app actually populates them.
+            if not instrument.calibration_records.exists():
+                due_date = today + timedelta(days=days_offset)
+                CalibrationRecord.objects.create(
+                    instrument=instrument,
+                    performed_at=due_date - timedelta(days=365),
+                    next_due_date=due_date,
+                    certificate_reference=f"DEMO-CAL-{serial}",
+                    notes="Demo seed data.",
+                )
+        return instruments
 
-    def seed_samples(self, fuel_types, test_methods, users):
+    def seed_samples(self, fuel_types, test_methods, users, instruments=None):
         if Sample.objects.exists():
             self.stdout.write("Samples already exist — skipping demo sample creation.")
             return
@@ -602,7 +614,11 @@ class Command(BaseCommand):
                     min_v, max_v = SPEC_LIMITS[fuel_code][test_code]
                     force_fail = plan_index == OUT_OF_SPEC_PLAN_INDEX and i == 0
                     value = self._plausible_value(min_v, max_v, out_of_spec=force_fail)
-                    result = TestResult(sample_test=st, value=value, entered_by=analyst)
+                    # Most results record which instrument produced them,
+                    # same as real usage; leaving some blank too so the
+                    # "not recorded" case is visible in the demo data.
+                    instrument = random.choice(instruments) if instruments and random.random() < 0.85 else None
+                    result = TestResult(sample_test=st, value=value, entered_by=analyst, instrument=instrument)
                     result.record(analyst)
 
             sample.recompute_status()

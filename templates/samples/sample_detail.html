@@ -98,7 +98,7 @@
   <div class="section-title">Tests &amp; results</div>
   {% if tests %}
   <table>
-    <tr><th>Test</th><th>Standard</th><th>Assigned to</th><th>Due</th><th>Status</th><th>Result</th><th></th></tr>
+    <tr><th>Test</th><th>Standard</th><th>Assigned to</th><th>Due</th><th>Status</th><th>Result</th><th>Instrument</th><th></th></tr>
     {% for t in tests %}
     <tr>
       <td>{{ t.test_method.name }}</td>
@@ -112,6 +112,12 @@
           {% if t.result.pass_fail == True %}<span class="badge pass">PASS</span>
           {% elif t.result.pass_fail == False %}<span class="badge fail">OUT OF SPEC</span>
           {% else %}<span class="badge unknown">no spec</span>{% endif %}
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td>
+        {% if t.result.instrument %}
+          <a href="{% url 'catalog:instrument_detail' t.result.instrument_id %}">{{ t.result.instrument.name }}</a>
+          {% if t.result.instrument_in_calibration == False %}<br><span class="badge fail">overdue at test time</span>{% endif %}
         {% else %}<span class="muted">—</span>{% endif %}
       </td>
       <td><a href="{% url 'labtests:enter_result' t.pk %}" class="btn small secondary">{% if t.result %}Edit result{% else %}Enter result{% endif %}</a></td>
