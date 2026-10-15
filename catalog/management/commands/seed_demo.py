@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import timedelta
 
@@ -441,6 +442,19 @@ class Command(BaseCommand):
         parser.add_argument("--reset", action="store_true", help="Delete existing demo data before seeding.")
 
     def handle(self, *args, **options):
+        # Safety net for live systems: once a database holds samples, this
+        # command would either wipe them (--reset) or mix demo samples and
+        # demo logins (with a published password) into real lab data.
+        # Refuse unless the operator explicitly opts in.
+        from django.core.management.base import CommandError
+
+        if Sample.objects.exists() and os.environ.get("ALLOW_DEMO_SEED") != "1":
+            raise CommandError(
+                "This database already contains samples, so seed_demo will not run "
+                "(it would wipe or mix demo data into real lab records). "
+                "If this really is a throwaway demo database, set ALLOW_DEMO_SEED=1 and run it again."
+            )
+
         if options["reset"]:
             self.stdout.write("Clearing existing data...")
             TestResult.objects.all().delete()

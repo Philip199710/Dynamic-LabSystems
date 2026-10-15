@@ -87,8 +87,21 @@ DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
+        conn_health_checks=True,
     )
 }
+
+# Never fall back to the local SQLite file on a hosted server: on Render
+# (and similar hosts) the service's own disk is wiped on every deploy or
+# restart, so lab records stored there would be lost. Refuse to start
+# instead, so a missing DATABASE_URL is caught at deploy time.
+if os.environ.get("RENDER") == "true" and not os.environ.get("DATABASE_URL"):
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        "DATABASE_URL is not set. Connect a (paid) Postgres database before "
+        "running Dynamic LabSystems on a hosted server, or lab data will be lost."
+    )
 
 
 AUTH_PASSWORD_VALIDATORS = [

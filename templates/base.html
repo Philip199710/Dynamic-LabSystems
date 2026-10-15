@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% include "partials/splash_head.html" %}
 </head>
 <body>
+  {% include "partials/splash.html" %}
   {% if user.is_authenticated %}
   <header class="navbar">
     <div class="brand">

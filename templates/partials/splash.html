@@ -1,0 +1,17 @@
+{% load static %}<div class="dl-topbar" id="dl-topbar" aria-hidden="true"></div>
+<div class="dl-splash" id="dl-splash" role="status" aria-label="Loading {{ SITE_NAME }}">
+  <div class="dl-splash-inner">
+    <div class="dl-mark">
+      <svg viewBox="0 0 345 324" aria-hidden="true">
+        <path class="dl-stroke dl-stroke-outer" d="M16 308 V16 H183 A146 146 0 0 1 183 308 Z"/>
+        <path class="dl-stroke dl-stroke-inner" d="M72 268 V72 H183 A90 90 0 0 1 183 252 H88"/>
+        <rect class="dl-square" x="0" y="268" width="56" height="56"/>
+      </svg>
+      <img src="{% static 'img/logo.png' %}" alt="">
+    </div>
+    <div class="dl-word">DYNAMIC <span>LAB</span>SYSTEMS</div>
+    <div class="dl-tag">Fuel &amp; Petroleum LIMS</div>
+    <div class="dl-bar"><i></i></div>
+  </div>
+</div>
+<script src="{% static 'js/splash.js' %}" defer></script>

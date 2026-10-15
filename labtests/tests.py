@@ -170,3 +170,50 @@ class InstrumentInCalibrationTests(TestCase):
         )
         new_result.record(self.analyst)
         self.assertTrue(new_result.instrument_in_calibration)
+
+
+class DataRetentionTests(TestCase):
+    """Lab records must survive: results can't be deleted via the admin,
+    amendments keep the earlier value on the custody log, and the demo
+    seeder refuses to touch a database that already holds samples."""
+
+    def setUp(self):
+        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.method = TestMethod.objects.create(
+            code="CETANE-D613", name="Cetane Number", standard_reference="ASTM D613", unit="—"
+        )
+        self.sample = Sample.objects.create(fuel_type=self.fuel, source="A")
+        self.sample_test = SampleTest.objects.create(sample=self.sample, test_method=self.method)
+        self.admin_user = User.objects.create_superuser("boss", password="x")
+
+    def test_amendment_keeps_previous_value_in_custody_log(self):
+        result = TestResult(sample_test=self.sample_test, value=50.0, entered_by=self.admin_user)
+        result.record(self.admin_user)
+        result.value = 52.5
+        result.record(self.admin_user)
+        amended = self.sample.custody_log.filter(action__startswith="Result amended").get()
+        self.assertIn("50.0", amended.notes)
+        self.assertIn("52.5", amended.notes)
+        self.assertEqual(TestResult.objects.count(), 1)
+
+    def test_admin_cannot_delete_results_or_samples(self):
+        from django.contrib import admin as django_admin
+        from django.test import RequestFactory
+
+        request = RequestFactory().get("/admin/")
+        request.user = self.admin_user
+        for model in (TestResult, SampleTest, Sample):
+            model_admin = django_admin.site._registry[model]
+            self.assertFalse(model_admin.has_delete_permission(request), model.__name__)
+
+    def test_seed_demo_refuses_when_samples_exist(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            call_command("seed_demo", "--reset")
+        self.assertTrue(Sample.objects.filter(pk=self.sample.pk).exists())
+
+    def test_healthz_ok(self):
+        response = self.client.get("/healthz")
+        self.assertEqual(response.status_code, 200)

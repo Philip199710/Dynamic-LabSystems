@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Client sign in · {{ SITE_NAME }}</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% include "partials/splash_head.html" %}
 </head>
 <body>
+  {% include "partials/splash.html" %}
   <div class="login-wrap">
     <div class="login-card">
       <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">

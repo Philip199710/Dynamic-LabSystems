@@ -9,3 +9,6 @@ class CertificateAdmin(admin.ModelAdmin):
     list_select_related = ("sample", "issued_by")
     search_fields = ("certificate_number", "sample__sample_id")
     readonly_fields = ("certificate_number", "issued_at")
+
+    def has_delete_permission(self, request, obj=None):
+        return False

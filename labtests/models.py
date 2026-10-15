@@ -109,7 +109,11 @@ class TestResult(models.Model):
         """
         if not self.instrument_id or not self.entered_at:
             return None
-        entered_date = self.entered_at.date() if hasattr(self.entered_at, "date") else self.entered_at
+        # Use the lab's local calendar date (settings.TIME_ZONE), not the UTC
+        # date: calibration dates are local dates, and near midnight the two differ.
+        entered_date = (
+            timezone.localdate(self.entered_at) if hasattr(self.entered_at, "date") else self.entered_at
+        )
         record = (
             self.instrument.calibration_records.filter(performed_at__lte=entered_date)
             .order_by("-performed_at", "-created_at")
@@ -121,6 +125,9 @@ class TestResult(models.Model):
 
     def record(self, actor):
         """Persist the result and cascade status/chain-of-custody updates. Call instead of bare .save()."""
+        previous = None
+        if self.pk:
+            previous = TestResult.objects.filter(pk=self.pk).values("value", "replicate_values", "notes").first()
         self.save()
         sample_test = self.sample_test
         verdict = self.pass_fail
@@ -131,9 +138,23 @@ class TestResult(models.Model):
         sample_test.save(update_fields=["status"])
 
         verdict_label = {True: "PASS", False: "OUT OF SPEC", None: "recorded (no spec on file)"}[verdict]
-        sample_test.sample.log(
-            actor,
-            f"Result entered: {sample_test.test_method.name} = {self.value} {self.unit} ({verdict_label})",
-        )
+        if previous is None:
+            sample_test.sample.log(
+                actor,
+                f"Result entered: {sample_test.test_method.name} = {self.value} {self.unit} ({verdict_label})",
+            )
+        else:
+            # Amendments never overwrite history silently: the earlier value
+            # stays on the sample's chain-of-custody log.
+            changes = []
+            for field, label in (("value", "value"), ("replicate_values", "replicates"), ("notes", "notes")):
+                old_val, new_val = previous[field], getattr(self, field)
+                if old_val != new_val:
+                    changes.append(f"{label}: {old_val!r} -> {new_val!r}")
+            sample_test.sample.log(
+                actor,
+                f"Result amended: {sample_test.test_method.name} = {self.value} {self.unit} ({verdict_label})",
+                notes="; ".join(changes) or "Re-saved with no changes",
+            )
         sample_test.sample.recompute_status()
         return self
