@@ -36,7 +36,7 @@ class SpecLimitEvaluateTests(TestCase):
 
 class TestResultRecordTests(TestCase):
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.method = TestMethod.objects.create(
             code="CETANE-D613", name="Cetane Number", standard_reference="ASTM D613", unit="—"
         )
@@ -87,7 +87,7 @@ class InstrumentInCalibrationTests(TestCase):
     """
 
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.method = TestMethod.objects.create(
             code="CETANE-D613", name="Cetane Number", standard_reference="ASTM D613", unit="—"
         )
@@ -178,7 +178,7 @@ class DataRetentionTests(TestCase):
     seeder refuses to touch a database that already holds samples."""
 
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.method = TestMethod.objects.create(
             code="CETANE-D613", name="Cetane Number", standard_reference="ASTM D613", unit="—"
         )

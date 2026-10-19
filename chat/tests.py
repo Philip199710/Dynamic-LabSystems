@@ -41,7 +41,7 @@ class ChatTests(TestCase):
         self.assertEqual(Message.objects.count(), 0)
 
     def test_html_is_escaped_and_sample_ids_link(self):
-        fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         sample = Sample.objects.create(fuel_type=fuel, source="A")
         self.client.force_login(self.a)
         body = f"<script>x</script> see {sample.sample_id}"

@@ -86,6 +86,20 @@ class AssignableMethodsTests(TestCase):
         sample = Sample.objects.create(fuel_type=fuel, source="A")
         form = AssignTestForm(sample=sample)
         codes = set(form.fields["test_method"].queryset.values_list("code", flat=True))
-        for code in ["WATER-D6304", "SED-D473", "DENS-D1298", "FLASH-D93", "FREEZE-D2386", "COND-D2624",
-                     "DIST-IBP-D86", "DIST10-D86", "DIST-D86", "DISTFBP-D86"]:
-            self.assertIn(code, codes)
+        self.assertEqual(codes, {"WATER-D6304", "SED-D473", "DENS-D1298", "FLASH-D93", "FREEZE-D2386", "COND-D2624",
+                                 "DIST-IBP-D86", "DIST10-D86", "DIST-D86", "DISTFBP-D86"})
+
+    def test_spec_ranges_for_main_products(self):
+        from catalog.models import SpecLimit
+
+        def lim(fuel, code):
+            sl = SpecLimit.objects.get(fuel_type__code=fuel, test_method__code=code)
+            return (sl.min_value, sl.max_value)
+
+        self.assertEqual(lim("JETA1", "FREEZE-D2386"), (None, -47.0))
+        self.assertEqual(lim("JETA1", "COND-D2624"), (50.0, 600.0))
+        self.assertEqual(lim("DIESEL", "FLASH-D93"), (55.0, None))
+        self.assertEqual(lim("GAS95", "DENS-D1298"), (720.0, 775.0))
+        self.assertEqual(lim("KERO", "FREEZE-D2386"), (None, -30.0))
+        for fuel in ["JETA1", "DIESEL", "GAS95", "GAS91", "KERO"]:
+            self.assertEqual(SpecLimit.objects.filter(fuel_type__code=fuel, test_method__instruments__isnull=False).distinct().count(), 10)

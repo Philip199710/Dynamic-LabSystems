@@ -21,7 +21,7 @@ User = get_user_model()
 )
 class DmsFeedTests(TestCase):
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.method = TestMethod.objects.create(
             code="CETANE-D613", name="Cetane Number", standard_reference="ASTM D613", unit="—"
         )

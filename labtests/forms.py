@@ -6,16 +6,15 @@ from .models import SampleTest, TestResult
 
 
 def assignable_methods(fuel_type):
-    from django.db.models import Q
-
     from catalog.models import TestMethod
 
-    return (
-        TestMethod.objects.filter(active=True)
-        .filter(Q(spec_limits__fuel_type=fuel_type) | Q(instruments__status=Instrument.STATUS_ACTIVE))
-        .distinct()
-        .order_by("name")
-    )
+    # Only tests the lab can actually run: methods linked to an active
+    # instrument. Falls back to the spec-limit rule if no instruments are
+    # registered (e.g. a fresh install).
+    lab = TestMethod.objects.filter(active=True, instruments__status=Instrument.STATUS_ACTIVE)
+    if not lab.exists():
+        lab = TestMethod.objects.filter(active=True, spec_limits__fuel_type=fuel_type)
+    return lab.distinct().order_by("name")
 
 
 class AssignTestForm(forms.ModelForm):
@@ -29,17 +28,19 @@ class AssignTestForm(forms.ModelForm):
         self._sample = sample
         if sample is not None:
             existing = sample.tests.values_list("test_method_id", flat=True)
-            # Offer methods with a spec limit on file for this sample's fuel
-            # type (so e.g. Research Octane Number never shows up on a diesel
-            # sample), plus every method the lab has an active instrument for —
-            # those can always be run; without a spec limit the result is
-            # recorded with no pass/fail verdict.
+            # Offer the tests the lab's instruments run. Where the product
+            # spec has no limit for a test, the result is reported without a
+            # pass/fail verdict — the label says so.
             fuel = sample.fuel_type
             field = self.fields["test_method"]
             field.queryset = assignable_methods(fuel).exclude(id__in=existing)
-            with_spec = set(fuel.spec_limits.values_list("test_method_id", flat=True))
+            limits = {
+                sl.test_method_id: sl.range_display()
+                for sl in fuel.spec_limits.all()
+                if sl.min_value is not None or sl.max_value is not None
+            }
             field.label_from_instance = lambda m: (
-                str(m) if m.id in with_spec else f"{m} — no spec limit for {fuel.code}"
+                f"{m} — spec {limits[m.id]} {m.unit}" if m.id in limits else f"{m} — report only"
             )
 
     def save(self, commit=True):

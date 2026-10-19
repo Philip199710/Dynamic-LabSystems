@@ -9,7 +9,7 @@ User = get_user_model()
 
 class SampleIdGenerationTests(TestCase):
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
 
     def test_sample_id_increments(self):
         s1 = Sample.objects.create(fuel_type=self.fuel, source="A")
@@ -28,7 +28,7 @@ class SampleIdGenerationTests(TestCase):
 
 class ChainOfCustodyTests(TestCase):
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.user = User.objects.create_user("analyst1", password="x")
 
     def test_log_creates_entry(self):
@@ -42,7 +42,7 @@ class ChainOfCustodyTests(TestCase):
 
 class RecomputeStatusTests(TestCase):
     def setUp(self):
-        self.fuel = FuelType.objects.create(name="Diesel", code="DIESEL")
+        self.fuel = FuelType.objects.get_or_create(code="DIESEL", defaults={"name": "Diesel"})[0]
         self.sample = Sample.objects.create(fuel_type=self.fuel, source="A")
 
     def test_no_tests_stays_received(self):
