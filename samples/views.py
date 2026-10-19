@@ -6,7 +6,6 @@ from django.utils import timezone
 from catalog.models import TestMethod
 from labtests.forms import AssignTestForm
 from . import dms
-from .emails import send_sample_registered_notification
 from .forms import SampleForm
 from .models import Sample
 
@@ -33,7 +32,6 @@ def sample_create(request):
             sample.received_by = request.user
             sample.save()
             sample.log(request.user, "Sample received", notes=f"Source: {sample.source}")
-            send_sample_registered_notification(sample, request=request)
             dms.sample_registered(sample)
             messages.success(request, f"Sample {sample.sample_id} registered.")
             return redirect("samples:detail", pk=sample.pk)

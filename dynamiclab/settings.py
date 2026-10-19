@@ -180,7 +180,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Dynamic LabSystems <n
 # Every newly registered sample is emailed here. Override with SAMPLE_NOTIFICATION_EMAIL
 # if this should go somewhere else, or set it to an empty string to turn the
 # notification off entirely.
-SAMPLE_NOTIFICATION_EMAIL = os.environ.get("SAMPLE_NOTIFICATION_EMAIL", "info@dynamicapac.com")
+SAMPLE_NOTIFICATION_EMAIL = os.environ.get("SAMPLE_NOTIFICATION_EMAIL", "dms@dynamicapac.com")
 
 # Dynamic DMS feed: every sample registered, every sample whose testing is
 # complete, and every issued Certificate of Analysis is emailed here, each
