@@ -3,8 +3,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from catalog.models import TestMethod
-from labtests.forms import AssignTestForm
+from labtests.forms import AssignTestForm, assignable_methods
 from . import dms
 from .forms import SampleForm
 from .models import Sample
@@ -49,10 +48,8 @@ def sample_detail(request, pk):
     # Only offer methods that actually have a spec limit on file for this
     # sample's fuel type — e.g. Freezing Point (D2386) shouldn't show up as
     # assignable on a gasoline sample.
-    available_methods = (
-        TestMethod.objects.filter(active=True, spec_limits__fuel_type=sample.fuel_type)
-        .exclude(id__in=tests.values_list("test_method_id", flat=True))
-        .distinct()
+    available_methods = assignable_methods(sample.fuel_type).exclude(
+        id__in=tests.values_list("test_method_id", flat=True)
     )
     return render(
         request,

@@ -74,3 +74,18 @@ class LabEquipmentTests(TestCase):
             self.assertEqual(inst.status, Instrument.STATUS_ACTIVE)
             self.assertEqual(sorted(set(inst.test_methods.values_list("standard_reference", flat=True))), standards)
         self.assertEqual(Instrument.objects.get(model_number="AWD-05C").test_methods.count(), 4)
+
+
+class AssignableMethodsTests(TestCase):
+    def test_every_lab_method_assignable_even_without_spec(self):
+        from catalog.models import FuelType
+        from labtests.forms import AssignTestForm
+        from samples.models import Sample
+
+        fuel = FuelType.objects.create(name="Test Avgas", code="AVGTEST")  # no spec limits at all
+        sample = Sample.objects.create(fuel_type=fuel, source="A")
+        form = AssignTestForm(sample=sample)
+        codes = set(form.fields["test_method"].queryset.values_list("code", flat=True))
+        for code in ["WATER-D6304", "SED-D473", "DENS-D1298", "FLASH-D93", "FREEZE-D2386", "COND-D2624",
+                     "DIST-IBP-D86", "DIST10-D86", "DIST-D86", "DISTFBP-D86"]:
+            self.assertIn(code, codes)

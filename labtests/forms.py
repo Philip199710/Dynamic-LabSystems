@@ -5,6 +5,19 @@ from catalog.models import Instrument
 from .models import SampleTest, TestResult
 
 
+def assignable_methods(fuel_type):
+    from django.db.models import Q
+
+    from catalog.models import TestMethod
+
+    return (
+        TestMethod.objects.filter(active=True)
+        .filter(Q(spec_limits__fuel_type=fuel_type) | Q(instruments__status=Instrument.STATUS_ACTIVE))
+        .distinct()
+        .order_by("name")
+    )
+
+
 class AssignTestForm(forms.ModelForm):
     class Meta:
         model = SampleTest
@@ -16,14 +29,17 @@ class AssignTestForm(forms.ModelForm):
         self._sample = sample
         if sample is not None:
             existing = sample.tests.values_list("test_method_id", flat=True)
-            # Restrict to methods with a spec limit on file for this sample's
-            # fuel type, so e.g. Research Octane Number never shows up as
-            # assignable on a diesel sample.
-            self.fields["test_method"].queryset = (
-                self.fields["test_method"]
-                .queryset.filter(active=True, spec_limits__fuel_type=sample.fuel_type)
-                .exclude(id__in=existing)
-                .distinct()
+            # Offer methods with a spec limit on file for this sample's fuel
+            # type (so e.g. Research Octane Number never shows up on a diesel
+            # sample), plus every method the lab has an active instrument for —
+            # those can always be run; without a spec limit the result is
+            # recorded with no pass/fail verdict.
+            fuel = sample.fuel_type
+            field = self.fields["test_method"]
+            field.queryset = assignable_methods(fuel).exclude(id__in=existing)
+            with_spec = set(fuel.spec_limits.values_list("test_method_id", flat=True))
+            field.label_from_instance = lambda m: (
+                str(m) if m.id in with_spec else f"{m} — no spec limit for {fuel.code}"
             )
 
     def save(self, commit=True):
