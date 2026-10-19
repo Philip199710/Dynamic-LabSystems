@@ -128,7 +128,7 @@ def client_portal_enter_result(request, profile, pk):
 
     existing = sample_test.result
     if request.method == "POST":
-        form = ResultEntryForm(request.POST, instance=existing)
+        form = ResultEntryForm(request.POST, instance=existing, sample_test=sample_test)
         if form.is_valid():
             result = form.save(commit=False)
             result.sample_test = sample_test
@@ -141,7 +141,7 @@ def client_portal_enter_result(request, profile, pk):
                 messages.success(request, f"Result recorded for {sample_test.test_method.name}.")
             return redirect("accounts:portal_sample_detail", pk=sample_test.sample_id)
     else:
-        form = ResultEntryForm(instance=existing)
+        form = ResultEntryForm(instance=existing, sample_test=sample_test)
     return render(
         request, "accounts/portal_enter_result.html", {"profile": profile, "form": form, "sample_test": sample_test}
     )

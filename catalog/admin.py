@@ -37,7 +37,8 @@ class CalibrationRecordInline(admin.TabularInline):
 
 @admin.register(Instrument)
 class InstrumentAdmin(admin.ModelAdmin):
-    list_display = ("name", "instrument_type", "serial_number", "status", "last_calibrated_at", "calibration_due_date")
+    list_display = ("name", "model_number", "instrument_type", "status", "last_calibrated_at", "calibration_due_date")
+    filter_horizontal = ("test_methods",)
     list_filter = ("status",)
     search_fields = ("name", "serial_number")
     # These two are now a cache derived from CalibrationRecord history

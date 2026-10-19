@@ -41,7 +41,7 @@ class ResultEntryForm(forms.ModelForm):
         fields = ["value", "instrument", "replicate_values", "notes"]
         widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, sample_test=None, **kwargs):
         super().__init__(*args, **kwargs)
         # No strict test-method-to-instrument mapping exists in the catalog
         # (instrument_type is a free-text hint, not a formal link), so this
@@ -50,7 +50,15 @@ class ResultEntryForm(forms.ModelForm):
         # instruments are excluded since a result shouldn't be attributed
         # to equipment that's flagged as unusable.
         field = self.fields["instrument"]
-        field.queryset = Instrument.objects.filter(status=Instrument.STATUS_ACTIVE).order_by("name")
+        active = Instrument.objects.filter(status=Instrument.STATUS_ACTIVE).order_by("name")
+        # Offer the instruments registered for this test's ASTM method first;
+        # fall back to every active instrument if none are linked yet.
+        if sample_test is None and self.instance.sample_test_id:
+            sample_test = self.instance.sample_test
+        linked = active.filter(test_methods=sample_test.test_method_id) if sample_test else active.none()
+        field.queryset = linked if linked.exists() else active
+        if linked.count() == 1 and not self.instance.pk and not self.is_bound:
+            self.initial.setdefault("instrument", linked.first().pk)
         field.required = False
         field.empty_label = "— not recorded —"
         field.label_from_instance = lambda i: f"{i.name} ({i.instrument_type})" if i.instrument_type else i.name

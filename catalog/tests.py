@@ -51,3 +51,26 @@ class CalibrationRecordCacheSyncTests(TestCase):
         record = CalibrationRecord.objects.create(instrument=self.instrument, performed_at=self.today)
         self.assertIn(self.instrument.name, str(record))
         self.assertIn(str(self.today), str(record))
+
+
+class LabEquipmentTests(TestCase):
+    """The lab's real equipment ships with the app (migration 0011)."""
+
+    EXPECTED = {
+        "KFT-40VC": ["ASTM D6304"],
+        "AWD-33": ["ASTM D473"],
+        "AWD-18A": ["ASTM D1298"],
+        "AWD-02": ["ASTM D93"],
+        "AWD-1803": ["ASTM D2386"],
+        "Model 1152": ["ASTM D2624"],
+        "AWD-05C": ["ASTM D86"],
+    }
+
+    def test_all_seven_instruments_with_their_standards(self):
+        from catalog.models import Instrument
+
+        for model, standards in self.EXPECTED.items():
+            inst = Instrument.objects.get(model_number=model)
+            self.assertEqual(inst.status, Instrument.STATUS_ACTIVE)
+            self.assertEqual(sorted(set(inst.test_methods.values_list("standard_reference", flat=True))), standards)
+        self.assertEqual(Instrument.objects.get(model_number="AWD-05C").test_methods.count(), 4)

@@ -9,7 +9,7 @@ from .models import Instrument
 
 @login_required
 def instrument_list(request):
-    instruments = Instrument.objects.all().order_by("name")
+    instruments = Instrument.objects.prefetch_related("test_methods").order_by("name")
     return render(request, "catalog/instrument_list.html", {"instruments": instruments})
 
 

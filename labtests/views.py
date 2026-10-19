@@ -26,7 +26,7 @@ def enter_result(request, pk):
     sample_test = get_object_or_404(SampleTest.objects.select_related("sample", "test_method"), pk=pk)
     existing = sample_test.result
     if request.method == "POST":
-        form = ResultEntryForm(request.POST, instance=existing)
+        form = ResultEntryForm(request.POST, instance=existing, sample_test=sample_test)
         if form.is_valid():
             result = form.save(commit=False)
             result.sample_test = sample_test
@@ -39,7 +39,7 @@ def enter_result(request, pk):
                 messages.success(request, f"Result recorded for {sample_test.test_method.name}.")
             return redirect("samples:detail", pk=sample_test.sample_id)
     else:
-        form = ResultEntryForm(instance=existing)
+        form = ResultEntryForm(instance=existing, sample_test=sample_test)
     return render(request, "labtests/result_form.html", {"form": form, "sample_test": sample_test})
 
 

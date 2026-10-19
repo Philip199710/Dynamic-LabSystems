@@ -87,7 +87,15 @@ class Instrument(models.Model):
     ]
 
     name = models.CharField(max_length=150)
+    model_number = models.CharField(max_length=60, blank=True, help_text="Manufacturer model, e.g. KFT-40VC")
     instrument_type = models.CharField(max_length=100, blank=True, help_text="e.g. Gas Chromatograph, Densitometer")
+    temperature_range = models.CharField(max_length=60, blank=True, help_text="Operating range, e.g. Ambient to -70°C")
+    test_methods = models.ManyToManyField(
+        TestMethod,
+        blank=True,
+        related_name="instruments",
+        help_text="Test methods (ASTM standards) this instrument is used for",
+    )
     serial_number = models.CharField(max_length=100, blank=True)
     location = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)

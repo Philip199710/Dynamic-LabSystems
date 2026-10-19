@@ -4,7 +4,9 @@
 <div class="page-header">
   <div>
     <h1>{{ instrument.name }} <span class="badge {% if instrument.status == 'ACTIVE' %}complete{% else %}disposed{% endif %}">{{ instrument.get_status_display }}</span></h1>
-    <p class="subtitle">{{ instrument.instrument_type|default:"—" }} &middot; serial {{ instrument.serial_number|default:"—" }} &middot; {{ instrument.location|default:"—" }}</p>
+    <p class="subtitle">{% if instrument.model_number %}Model {{ instrument.model_number }} &middot; {% endif %}{{ instrument.instrument_type|default:"—" }}{% if instrument.temperature_range %} &middot; {{ instrument.temperature_range }}{% endif %}{% if instrument.serial_number %} &middot; serial {{ instrument.serial_number }}{% endif %}{% if instrument.location %} &middot; {{ instrument.location }}{% endif %}</p>
+    {% with methods=instrument.test_methods.all %}{% if methods %}<p style="margin:0.35rem 0 0;">{% for m in methods %}<span class="badge" style="background:#eceef3;">{{ m.standard_reference }} · {{ m.name }}</span> {% endfor %}</p>{% endif %}{% endwith %}
+    {% if instrument.notes %}<p class="muted" style="margin:0.35rem 0 0;font-size:0.85rem;">{{ instrument.notes }}</p>{% endif %}
   </div>
   <a href="{% url 'catalog:instrument_list' %}" class="btn secondary">&larr; All instruments</a>
 </div>
