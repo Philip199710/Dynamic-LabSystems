@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}#{{ channel.name }} · Team chat · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
+<div class="chat-shell" id="chat"
+     data-channel="{{ channel.pk }}"
+     data-messages-url="{% url 'chat:messages' channel.pk %}"
+     data-send-url="{% url 'chat:send' channel.pk %}"
+     data-has-older="{{ has_older|yesno:'1,0' }}">
+  <aside class="chat-side">
+    <div class="chat-side-head">
+      <span class="section-title">Channels</span>
+    </div>
+    <ul class="chat-channels">
+      {% for c in channels %}
+      <li>
+        <a href="{% url 'chat:channel' c.obj.pk %}" class="{% if c.obj.pk == channel.pk %}active{% endif %}" data-channel-link="{{ c.obj.pk }}">
+          <span class="hash">#</span><span class="cname">{{ c.obj.name }}</span>
+          <span class="chat-unread" {% if not c.unread or c.obj.pk == channel.pk %}hidden{% endif %}>{{ c.unread }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    <details class="chat-new">
+      <summary>+ New channel</summary>
+      <form method="post" action="{% url 'chat:create_channel' %}">
+        {% csrf_token %}
+        <input name="name" maxlength="60" placeholder="e.g. night-shift" required>
+        <input name="description" maxlength="200" placeholder="What's it for? (optional)">
+        <button class="btn btn-primary btn-sm" type="submit">Create</button>
+      </form>
+    </details>
+    <p class="chat-side-note">Messages are kept permanently as part of the lab record.</p>
+  </aside>
+
+  <section class="chat-main">
+    <header class="chat-head">
+      <div>
+        <h2>#{{ channel.name }}</h2>
+        {% if channel.description %}<p>{{ channel.description }}</p>{% endif %}
+      </div>
+      <span class="chat-live" id="chat-live"><i></i>Live</span>
+    </header>
+
+    <div class="chat-stream" id="chat-stream" aria-live="polite">
+      <button type="button" class="chat-older" id="chat-older" hidden>Load earlier messages</button>
+      <div id="chat-list"></div>
+      <div class="chat-empty" id="chat-empty" hidden>
+        <strong>No messages in #{{ channel.name }} yet.</strong>
+        <span>Say hello — tip: type a sample ID like FS-2026-0003 and it becomes a link.</span>
+      </div>
+    </div>
+
+    {% if channel.is_archived %}
+    <div class="chat-archived">This channel is archived — read only.</div>
+    {% else %}
+    <form class="chat-compose" id="chat-compose" autocomplete="off">
+      {% csrf_token %}
+      <div class="chat-avatar me">{{ me_initials }}</div>
+      <textarea name="body" id="chat-input" rows="1" maxlength="4000" placeholder="Message #{{ channel.name }}" required></textarea>
+      <button class="btn btn-primary" type="submit" id="chat-send">Send</button>
+    </form>
+    <p class="chat-hint">Enter to send · Shift + Enter for a new line</p>
+    {% endif %}
+  </section>
+</div>
+{{ initial_messages|json_script:"chat-initial" }}
+<script src="{% static 'js/chat.js' %}" defer></script>
+{% endblock %}

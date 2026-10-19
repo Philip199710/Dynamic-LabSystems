@@ -1,4 +1,6 @@
 import base64
+import io
+import uuid
 
 from django.conf import settings
 from django.contrib import messages
@@ -58,14 +60,60 @@ def coa_context(sample):
     }
 
 
+def _pdf_safe_html(html):
+    """Adjust the certificate HTML for the PDF engine (xhtml2pdf).
+
+    Its built-in fonts have no ≥ / ≤ glyphs, so spec limits read "min" /
+    "max" instead of printing as empty boxes.
+    """
+    for symbol, word in (("\u2265", "min"), ("\u2264", "max")):
+        html = html.replace(symbol + " ", word + " ").replace(symbol, word + " ")
+    return html
+
+
+def _give_pdf_images_unique_names():
+    """Work around an xhtml2pdf/reportlab image mix-up.
+
+    reportlab names each embedded image after str(image). xhtml2pdf's image
+    wrapper doesn't define one, so the name is its memory address, which
+    Python reuses once an image has been drawn. Later images then matched
+    an earlier one's name and the PDF repeated it: every trend chart on the
+    COA came out as the Dynamic logo. A unique id per image fixes that.
+    """
+    from xhtml2pdf.xhtml2pdf_reportlab import PmlImageReader
+
+    if getattr(PmlImageReader, "_dl_unique_names", False):
+        return
+
+    def _name(self):
+        uid = self.__dict__.get("_dl_uid")
+        if uid is None:
+            uid = self.__dict__["_dl_uid"] = uuid.uuid4().hex
+        return f"PmlImageReader-{uid}"
+
+    PmlImageReader.__str__ = _name
+    PmlImageReader.__repr__ = _name
+    PmlImageReader._dl_unique_names = True
+
+
+def build_coa_pdf_bytes(sample):
+    """Render a sample's Certificate of Analysis to PDF bytes (None on failure)."""
+    _give_pdf_images_unique_names()
+    html = _pdf_safe_html(render_to_string("reports/coa_pdf.html", coa_context(sample)))
+    out = io.BytesIO()
+    status = pisa.CreatePDF(html, dest=out)
+    if status.err:
+        return None
+    return out.getvalue()
+
+
 def render_coa_pdf(sample):
     """Render a sample's Certificate of Analysis as a downloadable PDF response."""
-    html = render_to_string("reports/coa_pdf.html", coa_context(sample))
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="COA_{sample.sample_id}.pdf"'
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
+    pdf = build_coa_pdf_bytes(sample)
+    if pdf is None:
         return HttpResponse("Error generating PDF", status=500)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="COA_{sample.sample_id}.pdf"'
     return response
 
 
@@ -106,6 +154,9 @@ def issue_certificate(request, pk):
         else:
             certificate = Certificate.objects.create(sample=sample, issued_by=request.user)
             sample.log(request.user, "Certificate issued", notes=certificate.certificate_number)
+            from samples import dms
+
+            dms.certificate_issued(certificate)
             messages.success(
                 request, f"Certificate {certificate.certificate_number} issued for {sample.sample_id}."
             )

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin console · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="console-hero">
+  <div>
+    <span class="adm-badge"><i></i>Dynamic APAC admin</span>
+    <h1>Admin console</h1>
+    <p class="muted" style="margin:0.2rem 0 0;">{{ SITE_NAME }} · signed in as {{ user.get_full_name|default:user.get_username }}</p>
+  </div>
+  <a class="btn" href="{% url 'admin:index' %}">Open data administration</a>
+</div>
+
+<div class="console-grid">
+  <div class="card stat"><div class="n">{{ stats.samples_total }}</div><div class="l">Samples on record</div></div>
+  <div class="card stat"><div class="n">{{ stats.samples_month }}</div><div class="l">Registered this month</div></div>
+  <div class="card stat"><div class="n">{{ stats.samples_open }}</div><div class="l">In progress</div></div>
+  <div class="card stat"><div class="n">{{ stats.certs_total }}</div><div class="l">COAs issued ({{ stats.certs_month }} this month)</div></div>
+</div>
+
+<div class="console-cols">
+  <div class="card">
+    <p class="section-title">Lab accounts</p>
+    <table>
+      <thead><tr><th>User</th><th>Role</th><th>Last sign-in</th><th></th></tr></thead>
+      <tbody>
+      {% for p in people %}
+        <tr>
+          <td><strong>{{ p.user.get_full_name|default:p.user.get_username }}</strong><br><span class="muted">{{ p.user.get_username }}</span></td>
+          <td>{% if p.admin %}<span class="badge" style="background:#16171f;color:#fff;">Dynamic admin</span>{% endif %}
+              {% for g in p.groups %}{% if g != "Dynamic Admin" %}<span class="badge" style="background:#eceef3;">{{ g }}</span> {% endif %}{% endfor %}
+              {% if not p.user.is_active %}<span class="badge" style="background:#fdecea;color:#c62a21;">Disabled</span>{% endif %}</td>
+          <td class="muted">{{ p.user.last_login|date:"d M Y H:i"|default:"Never" }}</td>
+          <td class="text-right"><a href="{% url 'admin:auth_user_change' p.user.pk %}">Edit</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p style="margin:0.75rem 0 0;"><a class="btn btn-sm" href="{% url 'admin:auth_user_add' %}">+ Add lab user</a></p>
+  </div>
+
+  <div style="display:grid;gap:1rem;align-content:start;">
+    <div class="card">
+      <p class="section-title">DMS event feed</p>
+      <div class="feed-row"><span>Recipient</span><strong>{{ feed.recipient|default:"— not set —" }}</strong></div>
+      <div class="feed-row"><span>Email delivery</span>{% if feed.smtp_ready %}<span class="pill-ok">● Connected</span>{% else %}<span class="pill-warn">● Not configured</span>{% endif %}</div>
+      <div class="feed-row"><span>Events</span><span class="muted">Sample registered · Sample tested · COA issued</span></div>
+      {% if not feed.smtp_ready %}<p class="help">Set EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD and DEFAULT_FROM_EMAIL on Render to start delivery.</p>{% endif %}
+    </div>
+    <div class="card">
+      <p class="section-title">Go to</p>
+      <div class="console-links">
+        <a href="{% url 'dashboard:home' %}">Lab dashboard <span>&rarr;</span></a>
+        <a href="{% url 'samples:list' %}">All samples <span>&rarr;</span></a>
+        <a href="{% url 'chat:home' %}">Team chat <span>&rarr;</span></a>
+        <a href="{% url 'accounts:pending_clients' %}">Client approvals <span>&rarr;</span></a>
+      </div>
+    </div>
+    <div class="card">
+      <p class="section-title">Latest samples</p>
+      {% for s in recent %}
+        <div class="feed-row"><a href="{% url 'samples:detail' s.pk %}"><strong>{{ s.sample_id }}</strong></a><span class="muted">{{ s.fuel_type.code }} · {{ s.get_status_display }}</span></div>
+      {% empty %}<p class="empty">No samples yet.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

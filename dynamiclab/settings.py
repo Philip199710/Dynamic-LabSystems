@@ -3,6 +3,7 @@ Django settings for Dynamic LabSystems.
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "labtests",
     "dashboard",
     "reports",
+    "chat",
 ]
 
 MIDDLEWARE = [
@@ -72,6 +74,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "dashboard.context_processors.branding",
+                "chat.context_processors.chat_unread",
             ],
         },
     },
@@ -178,3 +181,14 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Dynamic LabSystems <n
 # if this should go somewhere else, or set it to an empty string to turn the
 # notification off entirely.
 SAMPLE_NOTIFICATION_EMAIL = os.environ.get("SAMPLE_NOTIFICATION_EMAIL", "info@dynamicapac.com")
+
+# Dynamic DMS feed: every sample registered, every sample whose testing is
+# complete, and every issued Certificate of Analysis is emailed here, each
+# with a machine-readable event.json attached so the DMS can ingest it.
+DMS_NOTIFICATION_EMAIL = os.environ.get("DMS_NOTIFICATION_EMAIL", "dms@dynamicapac.com")
+# Send those emails on a background thread so a slow mail server never slows
+# down the lab screens. Tests switch this off to check what was sent.
+DMS_EMAIL_ASYNC = os.environ.get("DMS_EMAIL_ASYNC", "1") == "1" and "test" not in sys.argv[1:2]
+# Public address of this deployment, used for links in emails. Render sets
+# RENDER_EXTERNAL_URL automatically.
+SITE_URL = os.environ.get("SITE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")

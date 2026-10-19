@@ -24,8 +24,9 @@
         <a href="{% url 'labtests:my_worklist' %}">My worklist</a>
         <a href="{% url 'dashboard:analytics_index' %}">Analytics</a>
         <a href="{% url 'catalog:instrument_list' %}">Instruments</a>
+        <a href="{% url 'chat:home' %}">Team chat<span class="nav-badge" id="nav-chat-badge" {% if not CHAT_UNREAD %}hidden{% endif %}>{{ CHAT_UNREAD|default:0 }}</span></a>
         {% if perms.accounts.change_clientprofile %}<a href="{% url 'accounts:pending_clients' %}">Client approvals</a>{% endif %}
-        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+        {% if IS_DYNAMIC_ADMIN %}<a href="{% url 'dynamic_console' %}">Admin console</a>{% endif %}
       {% endif %}
     </nav>
     <div class="user">
@@ -33,7 +34,7 @@
       {% if user.client_profile %}
       <form method="post" action="{% url 'accounts:portal_logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
       {% else %}
-      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<input type="hidden" name="next" value="{% if IS_DYNAMIC_ADMIN %}{% url 'dynamic_login' %}{% else %}{% url 'login' %}{% endif %}"><button type="submit">Log out</button></form>
       {% endif %}
     </div>
   </header>
@@ -57,5 +58,21 @@
       <p class="site-footer-copy">&copy; {% now "Y" %} {{ SITE_NAME }}. All rights reserved.</p>
     </div>
   </footer>
+  {% if user.is_authenticated and not user.client_profile %}
+  <script>
+  (function () {
+    var badge = document.getElementById("nav-chat-badge");
+    if (!badge || document.getElementById("chat")) return;  // the chat page updates it itself
+    function tick() {
+      if (document.hidden) return;
+      fetch("{% url 'chat:unread' %}", { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d) { badge.textContent = d.unread; badge.hidden = !d.unread; } })
+        .catch(function () {});
+    }
+    setInterval(tick, 30000);
+  })();
+  </script>
+  {% endif %}
 </body>
 </html>

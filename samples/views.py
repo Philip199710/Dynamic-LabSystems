@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from catalog.models import TestMethod
 from labtests.forms import AssignTestForm
+from . import dms
 from .emails import send_sample_registered_notification
 from .forms import SampleForm
 from .models import Sample
@@ -33,6 +34,7 @@ def sample_create(request):
             sample.save()
             sample.log(request.user, "Sample received", notes=f"Source: {sample.source}")
             send_sample_registered_notification(sample, request=request)
+            dms.sample_registered(sample)
             messages.success(request, f"Sample {sample.sample_id} registered.")
             return redirect("samples:detail", pk=sample.pk)
     else:
@@ -86,6 +88,7 @@ def sample_confirm_intake(request, pk):
             sample.storage_location = storage_location
         sample.save(update_fields=["status", "received_by", "date_received", "storage_location", "updated_at"])
         sample.log(request.user, "Intake confirmed", notes=f"Storage location: {storage_location or '—'}")
+        dms.sample_registered(sample)
         messages.success(request, f"Intake confirmed for {sample.sample_id} — ready to assign tests.")
     return redirect("samples:detail", pk=pk)
 

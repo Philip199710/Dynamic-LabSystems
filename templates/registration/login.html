@@ -13,7 +13,8 @@
     <div class="login-card">
       <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
       <h1>Sign in to {{ SITE_NAME }}</h1>
-      {% if form.errors %}<p class="help" style="color:#c62a21;">Incorrect username or password.</p>{% endif %}
+      <p class="login-kicker">Lab staff sign-in</p>
+      {% if form.errors %}{% for e in form.non_field_errors %}<p class="help" style="color:#c62a21;">{{ e }}</p>{% empty %}<p class="help" style="color:#c62a21;">Incorrect username or password.</p>{% endfor %}{% endif %}
       <form method="post">
         {% csrf_token %}
         <div class="field">
@@ -32,6 +33,7 @@
         <a href="{% url 'accounts:client_login' %}">Sign in to your client portal</a>,
         or <a href="{% url 'accounts:register' %}">create a client account</a>.
       </p>
+      <p class="login-alt"><a href="{% url 'dynamic_login' %}">Dynamic APAC admin sign-in &rarr;</a></p>
     </div>
   </div>
 </body>

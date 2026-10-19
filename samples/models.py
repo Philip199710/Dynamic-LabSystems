@@ -116,6 +116,11 @@ class Sample(models.Model):
         if new_status != self.status:
             self.status = new_status
             self.save(update_fields=["status", "updated_at"])
+            if new_status == self.STATUS_COMPLETE:
+                # Every test is resolved — stream the full result set to DMS.
+                from . import dms
+
+                dms.sample_tested(self)
 
     def log(self, actor, action, notes=""):
         return ChainOfCustodyEntry.objects.create(sample=self, actor=actor, action=action, notes=notes)

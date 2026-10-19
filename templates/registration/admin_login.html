@@ -1,0 +1,53 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin sign-in · Dynamic APAC</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% include "partials/splash_head.html" %}
+</head>
+<body>
+  {% include "partials/splash.html" %}
+  <div class="adm-login">
+    <section class="adm-login-brand">
+      <span class="adm-logo"><img src="{% static 'img/logo.png' %}" alt="Dynamic APAC"></span>
+      <div>
+        <h2>Dynamic APAC<br><span>Admin Console</span></h2>
+        <p>Oversight for every Dynamic LabSystems deployment — users, records and the DMS data feed.</p>
+        <ul class="adm-points">
+          <li>Manage lab accounts and roles</li>
+          <li>Audit samples, results and certificates</li>
+          <li>Monitor the dms@dynamicapac.com event feed</li>
+        </ul>
+      </div>
+      <span class="adm-foot">&copy; {% now "Y" %} Dynamic APAC · Restricted access</span>
+    </section>
+    <section class="adm-login-form">
+      <div class="adm-card">
+        <span class="adm-badge"><i></i>Administrators only</span>
+        <h1>Sign in</h1>
+        <p class="sub">Use your Dynamic APAC admin account.</p>
+        {% if form.errors %}
+          {% for e in form.non_field_errors %}<p class="adm-err">{{ e }}</p>{% empty %}<p class="adm-err">Incorrect username or password.</p>{% endfor %}
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="field">
+            <label for="id_username">Username</label>
+            {{ form.username }}
+          </div>
+          <div class="field">
+            <label for="id_password">Password</label>
+            {{ form.password }}
+          </div>
+          <input type="hidden" name="next" value="{{ next }}">
+          <button type="submit" class="btn">Sign in to the console</button>
+        </form>
+        <a class="adm-back" href="{% url 'login' %}">&larr; Lab staff sign-in</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
