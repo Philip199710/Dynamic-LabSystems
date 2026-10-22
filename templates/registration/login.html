@@ -14,6 +14,7 @@
       <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
       <h1>Sign in to {{ SITE_NAME }}</h1>
       <p class="login-kicker">Lab staff sign-in</p>
+      {% for m in messages %}<p class="help" style="color:#b8860b;">{{ m }}</p>{% endfor %}
       {% if form.errors %}{% for e in form.non_field_errors %}<p class="help" style="color:#c62a21;">{{ e }}</p>{% empty %}<p class="help" style="color:#c62a21;">Incorrect username or password.</p>{% endfor %}{% endif %}
       <form method="post">
         {% csrf_token %}

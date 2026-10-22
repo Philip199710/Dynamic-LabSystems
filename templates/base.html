@@ -15,6 +15,9 @@
       <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
       <span>{{ SITE_NAME }}</span>
     </div>
+    <button type="button" class="nav-toggle" aria-label="Menu" aria-expanded="false" onclick="var h=this.closest('.navbar');var o=h.classList.toggle('open');this.setAttribute('aria-expanded',o)">
+      <span></span><span></span><span></span>{% if CHAT_UNREAD %}<i class="nav-toggle-dot"></i>{% endif %}
+    </button>
     <nav>
       {% if user.client_profile %}
         <a href="{% url 'accounts:portal_home' %}">My samples</a>

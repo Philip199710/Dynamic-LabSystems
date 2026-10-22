@@ -141,6 +141,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard:home"
 LOGOUT_REDIRECT_URL = "login"
+CSRF_FAILURE_VIEW = "accounts.login_views.csrf_failure"
 
 # Branding
 SITE_NAME = "Dynamic LabSystems"

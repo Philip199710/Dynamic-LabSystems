@@ -36,6 +36,19 @@
     if (/\.(pdf|csv|xlsx?)$/i.test(url.pathname) || /\/pdf\/?$/i.test(url.pathname)) return; // downloads don't navigate
     go();
   });
-  document.addEventListener('submit', function (e) { if (!e.defaultPrevented) go(); });
-  window.addEventListener('pageshow', function () { if (bar) bar.classList.remove('is-active'); });
+  // Block double submits (double tap, or keyboard "Go" + button tap on a
+  // phone): the second copy arrives after the first has already changed
+  // things (e.g. signed in) and gets rejected.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (e.defaultPrevented) return;
+    if (form.dataset.submitting === '1') { e.preventDefault(); return; }
+    form.dataset.submitting = '1';
+    setTimeout(function () { delete form.dataset.submitting; }, 8000);
+    go();
+  });
+  window.addEventListener('pageshow', function () {
+    if (bar) bar.classList.remove('is-active');
+    document.querySelectorAll('form[data-submitting]').forEach(function (f) { delete f.dataset.submitting; });
+  });
 })();

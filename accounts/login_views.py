@@ -99,3 +99,30 @@ def admin_console(request):
         "accounts/admin_console.html",
         {"stats": stats, "people": people, "recent": recent, "feed": feed},
     )
+
+
+def csrf_failure(request, reason=""):
+    """Friendlier than Django's bare 403 page.
+
+    Almost always caused by a stale form: a double-submitted sign-in, or a
+    page left open across a sign-in/sign-out. If you're already signed in,
+    just carry on; otherwise send you back to the page with a fresh form.
+    """
+    from django.contrib import messages
+    from django.http import HttpResponseForbidden
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    login_paths = {str(reverse_lazy("login")), str(reverse_lazy("dynamic_login")), "/portal/login/"}
+    if request.path in login_paths and request.user.is_authenticated:
+        if request.path == str(reverse_lazy("dynamic_login")):
+            return redirect("dynamic_console")
+        return redirect("accounts:portal_home" if request.path == "/portal/login/" else "dashboard:home")
+    if request.method == "POST":
+        try:
+            messages.warning(request, "That form had expired — please try again.")
+        except Exception:
+            pass
+        back = request.path
+        if url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
+            return redirect(back)
+    return HttpResponseForbidden("This form expired. Go back, refresh the page and try again.")

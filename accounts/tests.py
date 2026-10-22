@@ -45,3 +45,23 @@ class SeparateLoginTests(TestCase):
         resp = self.client.get("/admin/login/?next=/admin/")
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(resp["Location"].startswith(reverse("dynamic_login")))
+
+
+class CsrfFailureTests(TestCase):
+    def test_stale_login_post_redirects_instead_of_403(self):
+        from django.test import Client
+
+        c = Client(enforce_csrf_checks=True)
+        resp = c.post(reverse("dynamic_login"), {"username": "x", "password": "y"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], reverse("dynamic_login"))
+        self.assertContains(c.get(reverse("dynamic_login")), "expired")
+
+    def test_already_signed_in_admin_goes_to_console(self):
+        from django.test import Client
+
+        boss = User.objects.create_superuser("boss2", password="pw-12345")
+        c = Client(enforce_csrf_checks=True)
+        c.force_login(boss)
+        resp = c.post(reverse("dynamic_login"), {"username": "boss2", "password": "pw-12345"})
+        self.assertRedirects(resp, reverse("dynamic_console"))

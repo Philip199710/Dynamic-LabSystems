@@ -29,6 +29,7 @@
         <span class="adm-badge"><i></i>Administrators only</span>
         <h1>Sign in</h1>
         <p class="sub">Use your Dynamic APAC admin account.</p>
+      {% for m in messages %}<p class="adm-err" style="color:#b8860b;">{{ m }}</p>{% endfor %}
         {% if form.errors %}
           {% for e in form.non_field_errors %}<p class="adm-err">{{ e }}</p>{% empty %}<p class="adm-err">Incorrect username or password.</p>{% endfor %}
         {% endif %}
