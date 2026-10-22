@@ -39,9 +39,18 @@ class AssignTestForm(forms.ModelForm):
                 for sl in fuel.spec_limits.all()
                 if sl.min_value is not None or sl.max_value is not None
             }
-            field.label_from_instance = lambda m: (
-                f"{m} — spec {limits[m.id]} {m.unit}" if m.id in limits else f"{m} — report only"
-            )
+            instruments = {}
+            for inst in Instrument.objects.filter(status=Instrument.STATUS_ACTIVE).prefetch_related("test_methods"):
+                for tm in inst.test_methods.all():
+                    instruments.setdefault(tm.id, []).append(inst.name)
+
+            def label(m):
+                text = f"{m.name} · {m.standard_reference}"
+                if m.id in instruments:
+                    text += f" · {', '.join(instruments[m.id])}"
+                return text + (f" — spec {limits[m.id]} {m.unit}" if m.id in limits else " — report only")
+
+            field.label_from_instance = label
 
     def save(self, commit=True):
         instance = super().save(commit=False)
