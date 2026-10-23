@@ -103,3 +103,19 @@ class AssignableMethodsTests(TestCase):
         self.assertEqual(lim("KERO", "FREEZE-D2386"), (None, -30.0))
         for fuel in ["JETA1", "DIESEL", "GAS95", "GAS91", "KERO"]:
             self.assertEqual(SpecLimit.objects.filter(fuel_type__code=fuel, test_method__instruments__isnull=False).distinct().count(), 10)
+
+
+class LubricantTests(TestCase):
+    def test_brake_fluid_and_oils_only_offer_relevant_tests(self):
+        from catalog.models import FuelType
+        from labtests.forms import assignable_methods
+
+        expected = {
+            "DOT4": {"DENS-D1298", "WATER-D6304", "FLASH-D93"},
+            "SAE50": {"DENS-D1298", "WATER-D6304", "FLASH-D93", "SED-D473"},
+            "HYD68": {"DENS-D1298", "WATER-D6304", "FLASH-D93", "SED-D473"},
+            "20W50": {"DENS-D1298", "WATER-D6304", "FLASH-D93", "SED-D473"},
+        }
+        for code, codes in expected.items():
+            product = FuelType.objects.get(code=code)
+            self.assertEqual(set(assignable_methods(product).values_list("code", flat=True)), codes)

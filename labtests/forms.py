@@ -5,6 +5,10 @@ from catalog.models import Instrument
 from .models import SampleTest, TestResult
 
 
+# Brake fluid and lubricants: only the tests linked to them in the catalog.
+NON_FUEL_PRODUCTS = {"DOT4", "SAE50", "HYD68", "20W50"}
+
+
 def assignable_methods(fuel_type):
     from catalog.models import TestMethod
 
@@ -14,6 +18,10 @@ def assignable_methods(fuel_type):
     lab = TestMethod.objects.filter(active=True, instruments__status=Instrument.STATUS_ACTIVE)
     if not lab.exists():
         lab = TestMethod.objects.filter(active=True, spec_limits__fuel_type=fuel_type)
+    # Products whose relevant tests are on file (e.g. brake fluid, oils) only
+    # offer those — no distillation or freezing point on a lubricant.
+    if fuel_type.code in NON_FUEL_PRODUCTS:
+        lab = lab.filter(spec_limits__fuel_type=fuel_type)
     return lab.distinct().order_by("name")
 
 
