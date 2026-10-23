@@ -99,7 +99,7 @@ class AssignableMethodsTests(TestCase):
         self.assertEqual(lim("JETA1", "FREEZE-D2386"), (None, -47.0))
         self.assertEqual(lim("JETA1", "COND-D2624"), (50.0, 600.0))
         self.assertEqual(lim("DIESEL", "FLASH-D93"), (55.0, None))
-        self.assertEqual(lim("GAS95", "DENS-D1298"), (720.0, 775.0))
+        self.assertEqual(lim("GAS95", "DENS-D1298"), (715.4, 770.7))  # converted to 20 °C
         self.assertEqual(lim("KERO", "FREEZE-D2386"), (None, -30.0))
         for fuel in ["JETA1", "DIESEL", "GAS95", "GAS91", "KERO"]:
             self.assertEqual(SpecLimit.objects.filter(fuel_type__code=fuel, test_method__instruments__isnull=False).distinct().count(), 10)
@@ -119,3 +119,14 @@ class LubricantTests(TestCase):
         for code, codes in expected.items():
             product = FuelType.objects.get(code=code)
             self.assertEqual(set(assignable_methods(product).values_list("code", flat=True)), codes)
+
+
+class DensityAt20Tests(TestCase):
+    def test_density_is_at_20c_with_converted_limits(self):
+        from catalog.models import SpecLimit, TestMethod
+
+        self.assertEqual(TestMethod.objects.get(code="DENS-D1298").name, "Density at 20°C (Hydrometer)")
+        jet = SpecLimit.objects.get(fuel_type__code="JETA1", test_method__code="DENS-D1298")
+        diesel = SpecLimit.objects.get(fuel_type__code="DIESEL", test_method__code="DENS-D1298")
+        self.assertEqual((jet.min_value, jet.max_value), (770.7, 836.5))
+        self.assertEqual((diesel.min_value, diesel.max_value), (816.4, 841.5))

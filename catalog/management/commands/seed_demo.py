@@ -74,7 +74,7 @@ TEST_METHODS = [
     # Added for aviation-fuel QC coverage and a manual/reference density
     # method, plus a sediment/particulate check for blended distillates —
     # see the ASTM standard references below for scope of each.
-    ("DENS-D1298", "Density at 15°C (Hydrometer)", "ASTM D1298", "kg/m³"),
+    ("DENS-D1298", "Density at 20°C (Hydrometer)", "ASTM D1298", "kg/m³"),
     ("SED-D473", "Sediment (Extraction Method)", "ASTM D473", "% mass"),
     ("FREEZE-D2386", "Freezing Point", "ASTM D2386", "°C"),
     ("COND-D2624", "Electrical Conductivity", "ASTM D2624", "pS/m"),
