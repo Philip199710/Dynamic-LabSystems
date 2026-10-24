@@ -9,18 +9,19 @@ from django.utils import timezone
 from catalog.models import FuelType, Instrument, SpecLimit, TestMethod
 from labtests.models import SampleTest, TestResult
 from samples.models import ChainOfCustodyEntry, Sample
+from labs.context import scoped
 
 
 @login_required
 def home(request):
-    status_counts = {row["status"]: row["count"] for row in Sample.objects.values("status").annotate(count=Count("id"))}
+    status_counts = {row["status"]: row["count"] for row in scoped(Sample.objects, request).values("status").annotate(count=Count("id"))}
     status_display = dict(Sample.STATUS_CHOICES)
     status_summary = [
         {"key": key, "label": label, "count": status_counts.get(key, 0)} for key, label in Sample.STATUS_CHOICES
     ]
 
     open_tests = (
-        SampleTest.objects.exclude(status=SampleTest.STATUS_COMPLETE)
+        scoped(SampleTest.objects, request, "sample__lab").exclude(status=SampleTest.STATUS_COMPLETE)
         .select_related("sample", "test_method", "assigned_to")
         .order_by("due_date")
     )
@@ -32,14 +33,14 @@ def home(request):
         workload[name] += 1
     workload = sorted(workload.items(), key=lambda kv: -kv[1])
 
-    recent_activity = ChainOfCustodyEntry.objects.select_related("sample", "actor").order_by("-timestamp")[:15]
+    recent_activity = scoped(ChainOfCustodyEntry.objects.select_related("sample", "actor"), request, "sample__lab").order_by("-timestamp")[:15]
 
-    results = TestResult.objects.select_related("sample_test__test_method")
+    results = scoped(TestResult.objects.select_related("sample_test__test_method"), request, "sample_test__sample__lab")
     total_results = results.count()
     fail_count = sum(1 for r in results if r.pass_fail is False)
     pass_count = sum(1 for r in results if r.pass_fail is True)
 
-    completed = Sample.objects.filter(status=Sample.STATUS_COMPLETE)
+    completed = scoped(Sample.objects, request).filter(status=Sample.STATUS_COMPLETE)
     turnaround_days = []
     for s in completed:
         days = (s.updated_at.date() - s.date_received).days
@@ -47,13 +48,13 @@ def home(request):
             turnaround_days.append(days)
     avg_turnaround = round(statistics.mean(turnaround_days), 1) if turnaround_days else None
 
-    instruments_due = Instrument.objects.filter(
+    instruments_due = scoped(Instrument.objects, request).filter(
         calibration_due_date__isnull=False, calibration_due_date__lt=timezone.localdate()
     )
 
     context = {
         "status_summary": status_summary,
-        "total_samples": Sample.objects.count(),
+        "total_samples": scoped(Sample.objects, request).count(),
         "open_tests_count": len(list(open_tests)),
         "overdue_tests": overdue_tests,
         "workload": workload,
@@ -72,7 +73,7 @@ def analytics_index(request):
     methods = TestMethod.objects.filter(active=True).order_by("name")
     method_counts = {
         row["sample_test__test_method"]: row["n"]
-        for row in TestResult.objects.values("sample_test__test_method").annotate(n=Count("id"))
+        for row in scoped(TestResult.objects, request, "sample_test__sample__lab").values("sample_test__test_method").annotate(n=Count("id"))
     }
 
     # Last-N values per method (chronological) for the index-page sparkline,
@@ -81,7 +82,7 @@ def analytics_index(request):
     method_ids = [m.id for m in methods if method_counts.get(m.id, 0)]
     results_by_method = defaultdict(list)
     recent_results = (
-        TestResult.objects.filter(sample_test__test_method_id__in=method_ids)
+        scoped(TestResult.objects, request, "sample_test__sample__lab").filter(sample_test__test_method_id__in=method_ids)
         .select_related("sample_test")
         .order_by("entered_at")
     )
@@ -115,7 +116,7 @@ def analytics_trend(request, method_id):
     # whichever fuel type actually has the most results on file.
     fuel_result_counts = {
         row["sample_test__sample__fuel_type"]: row["n"]
-        for row in TestResult.objects.filter(sample_test__test_method=method)
+        for row in scoped(TestResult.objects, request, "sample_test__sample__lab").filter(sample_test__test_method=method)
         .values("sample_test__sample__fuel_type")
         .annotate(n=Count("id"))
     }
@@ -128,7 +129,7 @@ def analytics_trend(request, method_id):
     if selected_fuel is None and fuel_types_with_data:
         selected_fuel = max(fuel_types_with_data, key=lambda f: fuel_result_counts.get(f.id, 0))
 
-    results_qs = TestResult.objects.filter(sample_test__test_method=method)
+    results_qs = scoped(TestResult.objects, request, "sample_test__sample__lab").filter(sample_test__test_method=method)
     if selected_fuel is not None:
         results_qs = results_qs.filter(sample_test__sample__fuel_type=selected_fuel)
     results = results_qs.select_related("sample_test__sample").order_by("entered_at")

@@ -28,6 +28,7 @@ class Sample(models.Model):
     ]
 
     sample_id = models.CharField(max_length=20, unique=True, editable=False)
+    lab = models.ForeignKey("labs.Lab", on_delete=models.PROTECT, null=True, blank=True, related_name="samples")
     fuel_type = models.ForeignKey(FuelType, on_delete=models.PROTECT, related_name="samples")
     source = models.CharField(max_length=150, help_text="Client, site, or submitter")
     source_type = models.CharField(

@@ -281,3 +281,17 @@ canvas.sparkline { display: block; }
   .stat .n { font-size: 1.4rem; }
   .console-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Labs & licences */
+.device-row { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .35rem .5rem; border-radius: 7px; margin-bottom: .3rem; font-size: .85rem; }
+.device-approved { background: #eaf6ef; }
+.device-pending { background: #fdf1d9; }
+.device-revoked { background: #f3f3f6; opacity: .7; }
+.device-actions { display: flex; gap: .35rem; }
+.device-actions form { display: inline; }
+.flag-row td { background: #fffaf0; }
+.btn.btn-sm { padding: .3rem .65rem; font-size: .8rem; }
+.lab-switch { display: inline-flex; align-items: center; gap: .4rem; }
+.lab-switch select { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: .2rem .4rem; font: inherit; font-size: .8rem; }
+.lab-switch option { color: #000; }
+.navbar .lab-name { font-size: .78rem; color: #b7bad0; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: .1rem .55rem; }

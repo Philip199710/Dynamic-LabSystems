@@ -12,6 +12,7 @@ class Client(models.Model):
     visible in that client's portal.
     """
 
+    lab = models.ForeignKey("labs.Lab", on_delete=models.PROTECT, null=True, blank=True, related_name="clients")
     name = models.CharField(max_length=150, unique=True)
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=40, blank=True)

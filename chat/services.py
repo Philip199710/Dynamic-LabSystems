@@ -38,12 +38,12 @@ def render_body(text, sample_links):
     return html.replace("\n", "<br>")
 
 
-def serialize(messages, me):
+def serialize(messages, me, lab=None):
     messages = list(messages)
     ids = {m for msg in messages for m in SAMPLE_ID_RE.findall(msg.body)}
     links = {
         sid: reverse("samples:detail", args=[pk])
-        for sid, pk in Sample.objects.filter(sample_id__in=ids).values_list("sample_id", "pk")
+        for sid, pk in Sample.objects.filter(sample_id__in=ids, lab=lab).values_list("sample_id", "pk")
     }
     out = []
     for m in messages:
@@ -71,11 +71,11 @@ def mark_read(user, channel, up_to_id):
         state.save(update_fields=["last_read_id"])
 
 
-def unread_by_channel(user):
+def unread_by_channel(user, lab):
     """{channel_id: unread count} for active channels, ignoring your own messages."""
     last_read = dict(ReadState.objects.filter(user=user).values_list("channel_id", "last_read_id"))
     counts = {}
-    for channel in Channel.objects.filter(is_archived=False).only("id"):
+    for channel in Channel.objects.filter(is_archived=False, lab=lab).only("id"):
         counts[channel.id] = 0
     if not counts:
         return counts

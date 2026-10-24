@@ -7,6 +7,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+
+from labs.context import scoped
 from django.template.loader import render_to_string
 from django.utils import timezone
 from xhtml2pdf import pisa
@@ -119,13 +121,13 @@ def render_coa_pdf(sample):
 
 @login_required
 def sample_coa_pdf(request, pk):
-    sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects.select_related("fuel_type", "received_by"), request), pk=pk)
     return render_coa_pdf(sample)
 
 
 @login_required
 def sample_coa_preview(request, pk):
-    sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects.select_related("fuel_type", "received_by"), request), pk=pk)
     return render(request, "reports/coa_pdf.html", coa_context(sample))
 
 
@@ -139,7 +141,7 @@ def issue_certificate(request, pk):
     in the client portal. Gated on reports.add_certificate (Lab Manager/QA
     by default) so Analysts can enter results but not sign off on them.
     """
-    sample = get_object_or_404(Sample, pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects, request), pk=pk)
     if request.method == "POST":
         if sample.status != Sample.STATUS_COMPLETE:
             messages.error(

@@ -33,6 +33,14 @@
       {% endif %}
     </nav>
     <div class="user">
+      {% if IS_DYNAMIC_ADMIN and ALL_LABS %}
+      <form method="post" action="{% url 'labs:view_lab' %}" class="lab-switch" title="Whose lab data you're viewing">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <select name="lab" onchange="this.form.submit()" aria-label="Viewing lab">
+          {% for l in ALL_LABS %}<option value="{{ l.pk }}"{% if CURRENT_LAB and l.pk == CURRENT_LAB.pk %} selected{% endif %}>{{ l.code }}</option>{% endfor %}
+        </select>
+      </form>
+      {% elif CURRENT_LAB and not user.client_profile %}<span class="lab-name">{{ CURRENT_LAB.code }}</span>{% endif %}
       <span>{{ user.get_username }}</span>
       {% if user.client_profile %}
       <form method="post" action="{% url 'accounts:portal_logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>

@@ -28,9 +28,11 @@ class SampleForm(forms.ModelForm):
             "client": "Link this sample to a client-portal account so they can see its status and download the certificate once complete.",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, lab=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["client"].required = False
+        if lab is not None:
+            self.fields["client"].queryset = self.fields["client"].queryset.filter(lab=lab)
         self.fields["client"].empty_label = "— not linked to a portal account —"
         for name in ("source_type", "tank_or_tanker_id", "tanker_plate_number", "origin", "destination_port"):
             self.fields[name].required = False

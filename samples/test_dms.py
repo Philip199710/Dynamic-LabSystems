@@ -1,3 +1,4 @@
+from labs.testing import default_lab
 import json
 
 from django.contrib.auth import get_user_model
@@ -51,7 +52,7 @@ class DmsFeedTests(TestCase):
         self.assertEqual(self._payload(sent[0])["sample"]["sample_id"], sample.sample_id)
 
     def test_completing_all_tests_emails_dms_once(self):
-        sample = Sample.objects.create(fuel_type=self.fuel, source="A")
+        sample = Sample.objects.create(fuel_type=self.fuel, source="A", lab=default_lab())
         st = SampleTest.objects.create(sample=sample, test_method=self.method)
         with self.captureOnCommitCallbacks(execute=True):
             TestResult(sample_test=st, value=58.0, entered_by=self.boss).record(self.boss)
@@ -67,7 +68,7 @@ class DmsFeedTests(TestCase):
         self.assertEqual(len(self._dms("sample.tested")), 1)
 
     def test_issuing_a_certificate_emails_dms_with_pdf(self):
-        sample = Sample.objects.create(fuel_type=self.fuel, source="A")
+        sample = Sample.objects.create(fuel_type=self.fuel, source="A", lab=default_lab())
         st = SampleTest.objects.create(sample=sample, test_method=self.method)
         TestResult(sample_test=st, value=58.0, entered_by=self.boss).record(self.boss)
         mail.outbox.clear()

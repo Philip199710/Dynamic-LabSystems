@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ lab.name }} · Labs · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="console-hero">
+  <div><span class="adm-badge"><i></i>Dynamic APAC admin</span>
+    <h1>{{ lab.name }} <span class="muted" style="font-size:1rem;font-weight:500;">{{ lab.code }}</span></h1>
+    <p class="muted" style="margin:.2rem 0 0;">{{ people|length }} login{{ people|length|pluralize }} · {{ lab.active_logins }} of {{ lab.max_logins }} licensed in use · {{ lab.devices_per_login }} PC per login ·
+      {% if lab.licence_valid %}<span class="pill-ok">licence active</span>{% else %}<span class="pill-warn">licence suspended</span>{% endif %}</p>
+  </div>
+  <form method="post" action="{% url 'labs:view_lab' %}">{% csrf_token %}<input type="hidden" name="lab" value="{{ lab.pk }}"><input type="hidden" name="next" value="/dashboard/"><button class="btn" type="submit">Open this lab's data</button></form>
+</div>
+{% include "labs/_nav.html" with tab="labs" %}
+
+<div class="card">
+  <p class="section-title">Logins &amp; approved PCs</p>
+  <table>
+    <thead><tr><th>Login</th><th>Role</th><th>PCs</th><th>Last sign-in</th><th></th></tr></thead>
+    <tbody>
+    {% for p in people %}
+    <tr{% if not p.user.is_active %} style="opacity:.55;"{% endif %}>
+      <td><strong>{{ p.user.get_full_name|default:p.user.get_username }}</strong><br><span class="muted">{{ p.user.get_username }}{% if not p.user.is_active %} · deactivated{% endif %}</span></td>
+      <td>{% for r in p.roles %}<span class="badge" style="background:#eceef3;">{{ r }}</span> {% empty %}<span class="muted">—</span>{% endfor %}</td>
+      <td>
+        {% for d in p.devices %}
+        <div class="device-row device-{{ d.status|lower }}">
+          <span><strong>PC-{{ d.pk }}</strong> {{ d.label }}<br><span class="muted">{{ d.get_status_display }}{% if d.last_ip %} · {{ d.last_ip }}{% endif %}{% if d.last_seen %} · seen {{ d.last_seen|timesince }} ago{% endif %}</span></span>
+          <span class="device-actions">
+            {% if d.status != "APPROVED" %}<form method="post" action="{% url 'labs:device_decide' d.pk 'approve' %}">{% csrf_token %}<button class="btn btn-sm" type="submit">Approve</button></form>{% endif %}
+            {% if d.status != "REVOKED" %}<form method="post" action="{% url 'labs:device_decide' d.pk 'revoke' %}">{% csrf_token %}<button class="btn btn-sm secondary" type="submit">{% if d.status == "PENDING" %}Refuse{% else %}Revoke{% endif %}</button></form>{% endif %}
+          </span>
+        </div>
+        {% empty %}<span class="muted">No PC yet — approved on first sign-in{% if not lab.auto_approve_first_device %} once you approve it{% endif %}</span>{% endfor %}
+      </td>
+      <td class="muted">{{ p.user.last_login|date:"d M Y H:i"|default:"Never" }}</td>
+      <td class="text-right"><form method="post" action="{% url 'labs:user_toggle' p.user.pk %}">{% csrf_token %}<button class="btn btn-sm secondary" type="submit">{% if p.user.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form></td>
+    </tr>
+    {% empty %}<tr><td colspan="5" class="empty">No logins yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="console-cols">
+  <div class="card">
+    <p class="section-title">Recent sign-ins</p>
+    <table class="compact">
+      <thead><tr><th>When</th><th>Login</th><th>Result</th><th>Where</th></tr></thead>
+      <tbody>
+      {% for e in events %}
+      <tr{% if e.new_network or e.outcome != "OK" %} class="flag-row"{% endif %}>
+        <td class="muted" style="white-space:nowrap;">{{ e.created_at|date:"d M H:i" }}</td>
+        <td>{{ e.username }}</td>
+        <td>{{ e.get_outcome_display }}{% if e.new_network %} <span class="badge" style="background:#fdf1d9;color:#b8860b;">new network</span>{% endif %}</td>
+        <td class="muted">{{ e.place|default:"" }}{% if e.place %}<br>{% endif %}{{ e.ip|default:"" }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="empty">No sign-ins recorded yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="display:grid;gap:1rem;align-content:start;">
+    <div class="card">
+      <p class="section-title">Add a login ({{ lab.seats_left }} of {{ lab.max_logins }} left)</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="add_user" value="1">
+        {{ user_form.non_field_errors }}
+        {% for field in user_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+        <button class="btn" type="submit"{% if not lab.seats_left %} disabled{% endif %}>Create login</button>
+      </form>
+    </div>
+    <div class="card">
+      <p class="section-title">Licence</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="save_licence" value="1">
+        {% for field in licence_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+        <button class="btn" type="submit">Save licence</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

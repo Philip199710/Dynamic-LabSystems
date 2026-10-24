@@ -34,7 +34,7 @@ _FAIL = "#c62a21"
 _UNKNOWN = "#9a9dab"
 
 
-def render_trend_chart_png(test_method, fuel_type, current_result=None):
+def render_trend_chart_png(test_method, fuel_type, current_result=None, lab=None):
     """Render a small trend/spec chart for a test method + fuel type.
 
     Plots every historical result for this exact (test_method, fuel_type)
@@ -45,9 +45,11 @@ def render_trend_chart_png(test_method, fuel_type, current_result=None):
     """
     from labtests.models import TestResult
 
+    qs = TestResult.objects.filter(sample_test__test_method=test_method, sample_test__sample__fuel_type=fuel_type)
+    # Only this lab's own history — never another customer's results.
+    qs = qs.filter(sample_test__sample__lab=lab)
     results = list(
-        TestResult.objects.filter(sample_test__test_method=test_method, sample_test__sample__fuel_type=fuel_type)
-        .select_related("sample_test__sample")
+        qs.select_related("sample_test__sample")
         .order_by("entered_at")
     )
     if not results:
@@ -155,6 +157,6 @@ def build_trend_charts(rows):
         if result is None:
             row["chart"] = None
             continue
-        fuel_type = result.sample_test.sample.fuel_type
-        row["chart"] = render_trend_chart_png(row["test_method"], fuel_type, current_result=result)
+        sample = result.sample_test.sample
+        row["chart"] = render_trend_chart_png(row["test_method"], sample.fuel_type, current_result=result, lab=sample.lab)
     return rows

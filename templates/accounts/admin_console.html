@@ -10,6 +10,23 @@
   <a class="btn" href="{% url 'admin:index' %}">Open data administration</a>
 </div>
 
+{% include "labs/_nav.html" with tab="console" %}
+
+{% if pending_devices %}
+<div class="card" style="border-color:#f3d48b;background:#fffaf0;">
+  <p class="section-title" style="color:#b8860b;">PCs waiting for approval</p>
+  {% for d in pending_devices %}
+  <div class="device-row device-pending">
+    <span><strong>{{ d.user.get_full_name|default:d.user.get_username }}</strong> ({{ d.user.lab_membership.lab.code }}) · PC-{{ d.pk }} {{ d.label }}<br><span class="muted">{{ d.first_ip|default:"" }} · {{ d.first_seen|timesince }} ago</span></span>
+    <span class="device-actions">
+      <form method="post" action="{% url 'labs:device_decide' d.pk 'approve' %}">{% csrf_token %}<input type="hidden" name="next" value="/dynamic/"><button class="btn btn-sm" type="submit">Approve</button></form>
+      <form method="post" action="{% url 'labs:device_decide' d.pk 'revoke' %}">{% csrf_token %}<input type="hidden" name="next" value="/dynamic/"><button class="btn btn-sm secondary" type="submit">Refuse</button></form>
+    </span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="console-grid">
   <div class="card stat"><div class="n">{{ stats.samples_total }}</div><div class="l">Samples on record</div></div>
   <div class="card stat"><div class="n">{{ stats.samples_month }}</div><div class="l">Registered this month</div></div>
@@ -18,24 +35,32 @@
 </div>
 
 <div class="console-cols">
+  <div style="display:grid;gap:1rem;align-content:start;">
   <div class="card">
-    <p class="section-title">Lab accounts</p>
+    <p class="section-title">Customer labs</p>
     <table>
-      <thead><tr><th>User</th><th>Role</th><th>Last sign-in</th><th></th></tr></thead>
+      <thead><tr><th>Lab</th><th>Logins</th><th>Licence</th><th>Samples</th><th></th></tr></thead>
       <tbody>
-      {% for p in people %}
+      {% for l in labs %}
         <tr>
-          <td><strong>{{ p.user.get_full_name|default:p.user.get_username }}</strong><br><span class="muted">{{ p.user.get_username }}</span></td>
-          <td>{% if p.admin %}<span class="badge" style="background:#16171f;color:#fff;">Dynamic admin</span>{% endif %}
-              {% for g in p.groups %}{% if g != "Dynamic Admin" %}<span class="badge" style="background:#eceef3;">{{ g }}</span> {% endif %}{% endfor %}
-              {% if not p.user.is_active %}<span class="badge" style="background:#fdecea;color:#c62a21;">Disabled</span>{% endif %}</td>
-          <td class="muted">{{ p.user.last_login|date:"d M Y H:i"|default:"Never" }}</td>
-          <td class="text-right"><a href="{% url 'admin:auth_user_change' p.user.pk %}">Edit</a></td>
+          <td><strong>{{ l.name }}</strong><br><span class="muted">{{ l.code }}</span></td>
+          <td>{{ l.logins }} / {{ l.max_logins }}</td>
+          <td>{% if l.licence_valid %}<span class="pill-ok">● Active</span>{% else %}<span class="pill-warn">● Suspended</span>{% endif %}</td>
+          <td>{{ l.samples_n }}</td>
+          <td class="text-right"><a href="{% url 'labs:detail' l.pk %}">Manage</a></td>
         </tr>
-      {% endfor %}
+      {% empty %}<tr><td colspan="5" class="empty">No labs yet.</td></tr>{% endfor %}
       </tbody>
     </table>
-    <p style="margin:0.75rem 0 0;"><a class="btn btn-sm" href="{% url 'admin:auth_user_add' %}">+ Add lab user</a></p>
+    <p style="margin:.75rem 0 0;"><a class="btn btn-sm" href="{% url 'labs:list' %}">+ Add a lab</a></p>
+  </div>
+  <div class="card">
+    <p class="section-title">Security alerts (last 7 days)</p>
+    {% for e in flagged %}
+      <div class="feed-row"><span><strong>{{ e.username }}</strong> <span class="muted">{{ e.lab.code|default:"Dynamic" }}</span><br><span class="muted">{% if e.new_network %}New network{% else %}{{ e.get_outcome_display }}{% endif %} · {{ e.place|default:e.ip|default:"unknown" }}</span></span><span class="muted">{{ e.created_at|date:"d M H:i" }}</span></div>
+    {% empty %}<p class="empty">No new-network or blocked sign-ins.</p>{% endfor %}
+    <p style="margin:.5rem 0 0;"><a href="{% url 'labs:signins' %}">Full sign-in log &rarr;</a></p>
+  </div>
   </div>
 
   <div style="display:grid;gap:1rem;align-content:start;">

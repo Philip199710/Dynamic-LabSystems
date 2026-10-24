@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+
+from labs.context import scoped
 from django.utils import timezone
 
 from .forms import CalibrationRecordForm
@@ -9,13 +11,13 @@ from .models import Instrument
 
 @login_required
 def instrument_list(request):
-    instruments = Instrument.objects.prefetch_related("test_methods").order_by("name")
+    instruments = scoped(Instrument.objects.prefetch_related("test_methods"), request).order_by("name")
     return render(request, "catalog/instrument_list.html", {"instruments": instruments})
 
 
 @login_required
 def instrument_detail(request, pk):
-    instrument = get_object_or_404(Instrument, pk=pk)
+    instrument = get_object_or_404(scoped(Instrument.objects, request), pk=pk)
     records = instrument.calibration_records.select_related("performed_by").all()
 
     if request.method == "POST":

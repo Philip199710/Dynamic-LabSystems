@@ -38,6 +38,7 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("dynamic/login/", AdminLoginView.as_view(), name="dynamic_login"),
     path("dynamic/", admin_console, name="dynamic_console"),
+    path("dynamic/labs/", include("labs.urls")),
     path("", include("accounts.urls")),
     path("dashboard/", include("dashboard.urls")),
     path("catalog/", include("catalog.urls")),

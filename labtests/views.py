@@ -1,3 +1,4 @@
+from labs.context import scoped
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,7 +10,7 @@ from .models import SampleTest
 
 @login_required
 def assign_test(request, sample_pk):
-    sample = get_object_or_404(Sample, pk=sample_pk)
+    sample = get_object_or_404(scoped(Sample.objects, request), pk=sample_pk)
     if request.method == "POST":
         form = AssignTestForm(request.POST, sample=sample)
         if form.is_valid():
@@ -23,7 +24,7 @@ def assign_test(request, sample_pk):
 
 @login_required
 def enter_result(request, pk):
-    sample_test = get_object_or_404(SampleTest.objects.select_related("sample", "test_method"), pk=pk)
+    sample_test = get_object_or_404(scoped(SampleTest.objects.select_related("sample", "test_method"), request, "sample__lab"), pk=pk)
     existing = sample_test.result
     if request.method == "POST":
         form = ResultEntryForm(request.POST, instance=existing, sample_test=sample_test)
@@ -46,7 +47,7 @@ def enter_result(request, pk):
 @login_required
 def my_worklist(request):
     tests = (
-        SampleTest.objects.filter(assigned_to=request.user)
+        scoped(SampleTest.objects.filter(assigned_to=request.user), request, "sample__lab")
         .exclude(status=SampleTest.STATUS_COMPLETE)
         .select_related("sample", "test_method")
         .order_by("due_date")

@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from labs.context import scoped
 from labtests.forms import AssignTestForm, assignable_methods
 from . import dms
 from .forms import SampleForm
@@ -12,7 +13,7 @@ from .models import Sample
 @login_required
 def sample_list(request):
     status = request.GET.get("status", "")
-    samples = Sample.objects.select_related("fuel_type", "received_by").all()
+    samples = scoped(Sample.objects.select_related("fuel_type", "received_by"), request)
     if status:
         samples = samples.filter(status=status)
     return render(
@@ -25,30 +26,31 @@ def sample_list(request):
 @login_required
 def sample_create(request):
     if request.method == "POST":
-        form = SampleForm(request.POST)
+        form = SampleForm(request.POST, lab=request.lab)
         if form.is_valid():
             sample = form.save(commit=False)
             sample.received_by = request.user
+            sample.lab = request.lab
             sample.save()
             sample.log(request.user, "Sample received", notes=f"Source: {sample.source}")
             dms.sample_registered(sample)
             messages.success(request, f"Sample {sample.sample_id} registered.")
             return redirect("samples:detail", pk=sample.pk)
     else:
-        form = SampleForm()
+        form = SampleForm(lab=request.lab)
     return render(request, "samples/sample_form.html", {"form": form})
 
 
 @login_required
 def sample_detail(request, pk):
-    sample = get_object_or_404(Sample.objects.select_related("fuel_type", "received_by"), pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects.select_related("fuel_type", "received_by"), request), pk=pk)
     tests = sample.tests.select_related("test_method", "assigned_to", "testresult", "testresult__instrument").all()
     custody_log = sample.custody_log.select_related("actor").all()
     assign_form = AssignTestForm(sample=sample)
     # Only offer methods that actually have a spec limit on file for this
     # sample's fuel type — e.g. Freezing Point (D2386) shouldn't show up as
     # assignable on a gasoline sample.
-    available_methods = assignable_methods(sample.fuel_type).exclude(
+    available_methods = assignable_methods(sample.fuel_type, sample.lab).exclude(
         id__in=tests.values_list("test_method_id", flat=True)
     )
     return render(
@@ -73,7 +75,7 @@ def sample_confirm_intake(request, pk):
     custody, so it stamps received_by/date_received here rather than at
     request time, and records an optional storage location.
     """
-    sample = get_object_or_404(Sample, pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects, request), pk=pk)
     if request.method == "POST" and sample.status == Sample.STATUS_REQUESTED:
         storage_location = request.POST.get("storage_location", "").strip()
         sample.status = Sample.STATUS_RECEIVED
@@ -90,7 +92,7 @@ def sample_confirm_intake(request, pk):
 
 @login_required
 def sample_dispose(request, pk):
-    sample = get_object_or_404(Sample, pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects, request), pk=pk)
     if request.method == "POST":
         sample.status = Sample.STATUS_DISPOSED
         sample.save(update_fields=["status", "updated_at"])
@@ -110,7 +112,7 @@ def sample_delete(request, pk):
     (samples:dispose), which keeps the record and its audit trail; this is
     for removing erroneous or duplicate entries.
     """
-    sample = get_object_or_404(Sample, pk=pk)
+    sample = get_object_or_404(scoped(Sample.objects, request), pk=pk)
     if request.method == "POST":
         sample_id = sample.sample_id
         sample.delete()

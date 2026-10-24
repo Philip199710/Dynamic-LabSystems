@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Labs & licences · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="console-hero"><div><span class="adm-badge"><i></i>Dynamic APAC admin</span><h1>Labs &amp; licences</h1></div></div>
+{% include "labs/_nav.html" with tab="labs" %}
+<div class="console-cols">
+  <div class="card">
+    <p class="section-title">Customer labs</p>
+    <table>
+      <thead><tr><th>Lab</th><th>Logins</th><th>PCs / login</th><th>Licence</th><th>Samples</th><th></th></tr></thead>
+      <tbody>
+      {% for l in labs %}
+      <tr>
+        <td><a href="{% url 'labs:detail' l.pk %}"><strong>{{ l.name }}</strong></a><br><span class="muted">{{ l.code }}{% if l.location or l.country %} · {{ l.location }}{% if l.location and l.country %}, {% endif %}{{ l.country }}{% endif %}</span></td>
+        <td>{{ l.logins }} / {{ l.max_logins }}</td>
+        <td>{{ l.devices_per_login }}</td>
+        <td>{% if l.licence_valid %}<span class="pill-ok">● Active</span>{% else %}<span class="pill-warn">● Suspended</span>{% endif %}{% if l.licence_expires %}<br><span class="muted">to {{ l.licence_expires|date:"d M Y" }}</span>{% endif %}</td>
+        <td>{{ l.samples_n }}</td>
+        <td class="text-right">{% if l.pending %}<span class="badge" style="background:#fdecea;color:#c62a21;">{{ l.pending }} PC{{ l.pending|pluralize }} waiting</span> {% endif %}<a href="{% url 'labs:detail' l.pk %}">Manage</a></td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="empty">No labs yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <p class="section-title">Add a customer lab</p>
+    <form method="post">{% csrf_token %}
+      {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+      {{ form.non_field_errors }}
+      <button class="btn" type="submit">Create lab</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

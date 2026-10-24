@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from labs.context import scoped
 from labtests.forms import ResultEntryForm
 from labtests.models import SampleTest
 from reports.views import render_coa_pdf
@@ -68,6 +69,7 @@ def client_portal_request_sample(request, profile):
             sample = form.save(commit=False)
             sample.client = profile.client
             sample.status = Sample.STATUS_REQUESTED
+            sample.lab = profile.client.lab
             sample.save()
             sample.log(request.user, "Sample requested via client portal", notes=f"Source: {sample.source}")
             send_sample_requested_notification(sample, request=request)
@@ -158,13 +160,13 @@ def client_portal_coa_pdf(request, profile, pk):
 
 @permission_required("accounts.change_clientprofile", raise_exception=True)
 def pending_clients(request):
-    pending = ClientProfile.objects.filter(is_approved=False).select_related("user", "client")
+    pending = scoped(ClientProfile.objects.filter(is_approved=False).select_related("user", "client"), request, "client__lab")
     return render(request, "accounts/pending_clients.html", {"pending": pending})
 
 
 @permission_required("accounts.change_clientprofile", raise_exception=True)
 def approve_client(request, pk):
-    profile = get_object_or_404(ClientProfile, pk=pk)
+    profile = get_object_or_404(scoped(ClientProfile.objects, request, "client__lab"), pk=pk)
     if request.method == "POST":
         profile.approve(request.user)
         send_client_approved_notification(profile, request=request)

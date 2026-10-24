@@ -10,7 +10,8 @@ from django.db import models
 
 
 class Channel(models.Model):
-    name = models.CharField(max_length=60, unique=True)
+    lab = models.ForeignKey("labs.Lab", on_delete=models.PROTECT, null=True, blank=True, related_name="channels")
+    name = models.CharField(max_length=60)
     description = models.CharField(max_length=200, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
@@ -20,6 +21,7 @@ class Channel(models.Model):
 
     class Meta:
         ordering = ["name"]
+        unique_together = [("lab", "name")]
 
     def __str__(self):
         return f"#{self.name}"

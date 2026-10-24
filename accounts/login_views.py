@@ -27,6 +27,15 @@ class LabLoginForm(AuthenticationForm):
                 "This is a client account — please sign in through the client portal.",
                 code="use_client_login",
             )
+        membership = getattr(user, "lab_membership", None)
+        if membership is None:
+            raise forms.ValidationError(
+                "This login isn't assigned to a lab yet. Ask Dynamic APAC to set it up.", code="no_lab"
+            )
+        if not membership.lab.licence_valid:
+            raise forms.ValidationError(
+                f"{membership.lab.name}'s licence is not active. Contact Dynamic APAC.", code="licence"
+            )
 
 
 class AdminLoginForm(AuthenticationForm):
@@ -43,6 +52,45 @@ class LabLoginView(LoginView):
     template_name = "registration/login.html"
     authentication_form = LabLoginForm
 
+    def form_valid(self, form):
+        from labs.devices import check_device, client_ip, is_new_network, record_event, set_device_cookie
+        from labs.models import Device, LoginEvent
+
+        user = form.get_user()
+        lab = user.lab_membership.lab
+        device, new_raw = check_device(self.request, user, lab)
+        if device.status != Device.STATUS_APPROVED:
+            revoked = device.status == Device.STATUS_REVOKED
+            record_event(
+                self.request, user=user, lab=lab, device=device,
+                outcome=LoginEvent.OUTCOME_BLOCKED if revoked else LoginEvent.OUTCOME_PENDING,
+                detail="Revoked PC" if revoked else "New PC",
+            )
+            response = render(self.request, "labs/device_pending.html", {"lab": lab, "device": device, "revoked": revoked, "login_user": user})
+            return set_device_cookie(response, new_raw) if new_raw else response
+        new_net = is_new_network(user, client_ip(self.request))
+        response = super().form_valid(form)
+        record_event(self.request, user=user, lab=lab, device=device, outcome=LoginEvent.OUTCOME_OK, new_network=new_net)
+        return set_device_cookie(response, new_raw) if new_raw else response
+
+    def form_invalid(self, form):
+        _record_failure(self.request, form)
+        return super().form_invalid(form)
+
+
+def _record_failure(request, form):
+    from labs.devices import record_event
+    from labs.models import LoginEvent
+
+    username = (request.POST.get("username") or "")[:150]
+    if not username:
+        return
+    User = get_user_model()
+    user = User.objects.filter(username=username).first()
+    lab = getattr(getattr(user, "lab_membership", None), "lab", None) if user else None
+    errors = " ".join(str(e) for e in form.non_field_errors())[:200]
+    record_event(request, user=user, username=username, lab=lab, outcome=LoginEvent.OUTCOME_FAILED, detail=errors)
+
 
 class AdminLoginView(LoginView):
     template_name = "registration/admin_login.html"
@@ -51,6 +99,20 @@ class AdminLoginView(LoginView):
 
     def get_default_redirect_url(self):
         return str(self.next_page)
+
+    def form_valid(self, form):
+        from labs.devices import client_ip, is_new_network, record_event
+        from labs.models import LoginEvent
+
+        user = form.get_user()
+        new_net = is_new_network(user, client_ip(self.request))
+        response = super().form_valid(form)
+        record_event(self.request, user=user, outcome=LoginEvent.OUTCOME_OK, detail="Dynamic admin", new_network=new_net)
+        return response
+
+    def form_invalid(self, form):
+        _record_failure(self.request, form)
+        return super().form_invalid(form)
 
 
 def dynamic_admin_required(view):
@@ -94,10 +156,26 @@ def admin_console(request):
         "recipient": getattr(settings, "DMS_NOTIFICATION_EMAIL", ""),
         "smtp_ready": bool(getattr(settings, "EMAIL_HOST", "")) and "console" not in settings.EMAIL_BACKEND,
     }
+    from django.db.models import Count, Q
+
+    from labs.models import Device, Lab, LoginEvent
+
+    labs = Lab.objects.annotate(
+        logins=Count("members", filter=Q(members__user__is_active=True), distinct=True),
+        samples_n=Count("samples", distinct=True),
+    )
+    pending_devices = Device.objects.filter(status=Device.STATUS_PENDING, user__is_active=True).select_related(
+        "user", "user__lab_membership__lab"
+    )[:20]
+    week_ago = timezone.now() - timezone.timedelta(days=7)
+    flagged = LoginEvent.objects.filter(created_at__gte=week_ago).filter(
+        Q(new_network=True) | Q(outcome=LoginEvent.OUTCOME_BLOCKED)
+    ).select_related("lab")[:10]
     return render(
         request,
         "accounts/admin_console.html",
-        {"stats": stats, "people": people, "recent": recent, "feed": feed},
+        {"stats": stats, "people": people, "recent": recent, "feed": feed,
+         "labs": labs, "pending_devices": pending_devices, "flagged": flagged},
     )
 
 

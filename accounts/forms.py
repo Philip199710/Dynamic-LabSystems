@@ -21,10 +21,22 @@ class ClientRegistrationForm(forms.Form):
         label="Company / organization name",
         help_text="If your company already has a portal, use the exact same name — a Lab Manager will link your account to it.",
     )
+    lab = forms.ModelChoiceField(queryset=None, label="Laboratory", empty_label=None,
+                                 help_text="The lab that will test your samples.")
     full_name = forms.CharField(max_length=150, label="Your name")
     email = forms.EmailField(label="Work email", help_text="This will be your username.")
     password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
     password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from labs.models import Lab
+
+        labs = Lab.objects.filter(is_active=True).order_by("name")
+        self.fields["lab"].queryset = labs
+        if labs.count() <= 1:
+            self.fields["lab"].widget = forms.HiddenInput()
+            self.fields["lab"].initial = labs.first().pk if labs.exists() else None
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -53,7 +65,12 @@ class ClientRegistrationForm(forms.Form):
         user.set_password(self.cleaned_data["password1"])
         user.save()
 
-        client, _ = Client.objects.get_or_create(name=self.cleaned_data["company_name"].strip())
+        client, _ = Client.objects.get_or_create(
+            name=self.cleaned_data["company_name"].strip(), defaults={"lab": self.cleaned_data["lab"]}
+        )
+        if client.lab_id is None:
+            client.lab = self.cleaned_data["lab"]
+            client.save(update_fields=["lab"])
         profile = ClientProfile.objects.create(user=user, client=client)
         return profile
 

@@ -86,6 +86,7 @@ class Instrument(models.Model):
         (STATUS_OUT_OF_SERVICE, "Out of service"),
     ]
 
+    lab = models.ForeignKey("labs.Lab", on_delete=models.PROTECT, null=True, blank=True, related_name="instruments")
     name = models.CharField(max_length=150)
     model_number = models.CharField(max_length=60, blank=True, help_text="Manufacturer model, e.g. KFT-40VC")
     instrument_type = models.CharField(max_length=100, blank=True, help_text="e.g. Gas Chromatograph, Densitometer")

@@ -1,0 +1,5 @@
+<div class="tabs" style="margin-bottom:1.25rem;">
+  <a href="{% url 'dynamic_console' %}" class="{% if tab == 'console' %}active{% endif %}">Overview</a>
+  <a href="{% url 'labs:list' %}" class="{% if tab == 'labs' %}active{% endif %}">Labs &amp; licences</a>
+  <a href="{% url 'labs:signins' %}" class="{% if tab == 'signins' %}active{% endif %}">Sign-in log</a>
+</div>

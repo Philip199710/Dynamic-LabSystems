@@ -30,9 +30,15 @@ def _url(path):
     return f"{base}{path}" if base else path
 
 
+def _lab(sample):
+    return f"{sample.lab.code} · " if sample.lab_id else ""
+
+
 def _sample_data(sample):
     return {
         "sample_id": sample.sample_id,
+        "lab": sample.lab.name if sample.lab_id else "",
+        "lab_code": sample.lab.code if sample.lab_id else "",
         "status": sample.get_status_display(),
         "fuel_type": sample.fuel_type.name,
         "fuel_code": sample.fuel_type.code,
@@ -142,7 +148,7 @@ def sample_registered(sample):
     def build():
         from .models import Sample
 
-        s = Sample.objects.select_related("fuel_type", "received_by", "client").get(pk=pk)
+        s = Sample.objects.select_related("fuel_type", "received_by", "client", "lab").get(pk=pk)
         data = _sample_data(s)
         body = (
             f"A sample was registered at {settings.SITE_NAME}.\n\n"
@@ -164,7 +170,7 @@ def sample_registered(sample):
             )
             + f"\n\nView sample: {data['url']}\n\nAutomated message from {settings.SITE_NAME}. event.json attached."
         )
-        return (f"[DMS] Sample registered: {s.sample_id}", body, _event("sample.registered", s))
+        return (f"[DMS] {_lab(s)}Sample registered: {s.sample_id}", body, _event("sample.registered", s))
 
     _dispatch(build)
 
@@ -175,7 +181,7 @@ def sample_tested(sample):
     def build():
         from .models import Sample
 
-        s = Sample.objects.select_related("fuel_type", "received_by", "client").get(pk=pk)
+        s = Sample.objects.select_related("fuel_type", "received_by", "client", "lab").get(pk=pk)
         rows = _results_data(s)
         fails = [r for r in rows if r["verdict"] == "OUT OF SPEC"]
         overall = "OUT OF SPEC" if fails else "ALL PASS"
@@ -198,7 +204,7 @@ def sample_tested(sample):
             f"Automated message from {settings.SITE_NAME}. event.json attached."
         )
         event = _event("sample.tested", s, overall=overall, results=rows)
-        return (f"[DMS] Sample tested: {s.sample_id} ({overall})", body, event)
+        return (f"[DMS] {_lab(s)}Sample tested: {s.sample_id} ({overall})", body, event)
 
     _dispatch(build)
 
@@ -210,7 +216,7 @@ def certificate_issued(certificate):
         from reports.models import Certificate
         from reports.views import build_coa_pdf_bytes
 
-        c = Certificate.objects.select_related("sample", "sample__fuel_type", "sample__client", "issued_by").get(pk=pk)
+        c = Certificate.objects.select_related("sample", "sample__fuel_type", "sample__client", "sample__lab", "issued_by").get(pk=pk)
         s = c.sample
         rows = _results_data(s)
         overall = "OUT OF SPEC" if any(r["verdict"] == "OUT OF SPEC" for r in rows) else "ALL PASS"
@@ -244,6 +250,6 @@ def certificate_issued(certificate):
             results=rows,
         )
         attachments = [(f"COA_{c.certificate_number}.pdf", pdf, "application/pdf")] if pdf else []
-        return (f"[DMS] COA issued: {c.certificate_number} for {s.sample_id}", body, event, attachments)
+        return (f"[DMS] {_lab(s)}COA issued: {c.certificate_number} for {s.sample_id}", body, event, attachments)
 
     _dispatch(build)

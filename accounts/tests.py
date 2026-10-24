@@ -1,3 +1,4 @@
+from labs.testing import login_lab_user, make_lab_user
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -9,7 +10,7 @@ class SeparateLoginTests(TestCase):
     def setUp(self):
         from django.contrib.auth.models import Group
 
-        self.lab = User.objects.create_user("labmanager", password="pw-12345", is_staff=True)
+        self.lab = make_lab_user("labmanager", password="pw-12345", is_staff=True)
         self.boss = User.objects.create_superuser("phil", password="pw-12345")
         self.dyn = User.objects.create_user("ops", password="pw-12345", is_staff=True)
         self.dyn.groups.add(Group.objects.get(name="Dynamic Admin"))
@@ -35,7 +36,7 @@ class SeparateLoginTests(TestCase):
         self.assertContains(self.client.get(reverse("dynamic_console")), "Admin console")
 
     def test_console_and_django_admin_closed_to_lab_staff(self):
-        self.client.force_login(self.lab)
+        login_lab_user(self.client, self.lab)
         self.assertEqual(self.client.get(reverse("dynamic_console")).status_code, 403)
         self.assertNotEqual(self.client.get("/admin/").status_code, 200)
         self.client.force_login(self.boss)

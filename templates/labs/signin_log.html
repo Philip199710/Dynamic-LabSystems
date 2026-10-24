@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign-in log · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="console-hero"><div><span class="adm-badge"><i></i>Dynamic APAC admin</span><h1>Sign-in log</h1></div></div>
+{% include "labs/_nav.html" with tab="signins" %}
+<form method="get" class="filters" style="align-items:center;">
+  <select name="lab" onchange="this.form.submit()" style="width:auto;"><option value="">All labs</option>{% for l in labs %}<option value="{{ l.pk }}"{% if lab_id == l.pk|stringformat:"s" %} selected{% endif %}>{{ l.name }}</option>{% endfor %}</select>
+  <label style="display:flex;gap:.4rem;align-items:center;margin:0;font-weight:500;"><input type="checkbox" name="flag" value="1" style="width:auto;" onchange="this.form.submit()"{% if flag %} checked{% endif %}> Only new PCs, blocked and new-network sign-ins</label>
+</form>
+<div class="card">
+  <table class="compact">
+    <thead><tr><th>When</th><th>Login</th><th>Lab</th><th>Result</th><th>PC</th><th>Location</th><th>IP</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+    <tr{% if e.new_network or e.outcome != "OK" %} class="flag-row"{% endif %}>
+      <td class="muted" style="white-space:nowrap;">{{ e.created_at|date:"d M Y H:i" }}</td>
+      <td>{{ e.username }}</td>
+      <td>{{ e.lab.code|default:"Dynamic" }}</td>
+      <td>{{ e.get_outcome_display }}{% if e.new_network %} <span class="badge" style="background:#fdf1d9;color:#b8860b;">new network</span>{% endif %}{% if e.detail and e.outcome == "FAILED" %}<br><span class="muted">{{ e.detail|truncatechars:60 }}</span>{% endif %}</td>
+      <td class="muted">{% if e.device %}PC-{{ e.device.pk }} {{ e.device.label }}{% else %}—{% endif %}</td>
+      <td>{{ e.place|default:"—" }}</td>
+      <td class="muted">{{ e.ip|default:"—" }}</td>
+    </tr>
+    {% empty %}<tr><td colspan="7" class="empty">Nothing yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "dashboard",
     "reports",
     "chat",
+    "labs",
 ]
 
 MIDDLEWARE = [
@@ -50,6 +51,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "accounts.middleware.ClientPortalAccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "labs.middleware.LabMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -142,6 +144,8 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard:home"
 LOGOUT_REDIRECT_URL = "login"
 CSRF_FAILURE_VIEW = "accounts.login_views.csrf_failure"
+# City/country lookup for the sign-in log (ipinfo.io). Off in tests.
+GEOIP_LOOKUP = os.environ.get("GEOIP_LOOKUP", "1") == "1" and "test" not in sys.argv[1:2]
 
 # Branding
 SITE_NAME = "Dynamic LabSystems"

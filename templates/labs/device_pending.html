@@ -1,0 +1,28 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PC approval needed · {{ SITE_NAME }}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card" style="max-width:420px;">
+      <img src="{% static 'img/logo.png' %}" alt="{{ SITE_NAME }}">
+      {% if revoked %}
+        <h1 style="margin-bottom:.75rem;">This PC has been removed</h1>
+        <p class="help" style="font-size:.9rem;color:var(--ink);">Dynamic APAC removed <strong>{{ device.label }}</strong> from the approved PCs for <strong>{{ login_user.get_username }}</strong>. You can't sign in here with this login.</p>
+      {% else %}
+        <h1 style="margin-bottom:.75rem;">New PC — waiting for approval</h1>
+        <p class="help" style="font-size:.9rem;color:var(--ink);">Your password is correct, but <strong>{{ login_user.get_username }}</strong> is licensed for {{ lab.devices_per_login }} PC{{ lab.devices_per_login|pluralize }} and this one (<strong>{{ device.label }}</strong>) isn't approved yet.</p>
+        <p class="help" style="font-size:.9rem;">Dynamic APAC has been notified. Once it's approved, sign in again on this PC.</p>
+      {% endif %}
+      <div class="feed-row" style="margin-top:1rem;"><span class="muted">Lab</span><strong>{{ lab.name }}</strong></div>
+      <div class="feed-row"><span class="muted">Reference</span><strong>PC-{{ device.pk }}</strong></div>
+      <a class="btn" style="display:block;text-align:center;margin-top:1.25rem;" href="{% url 'login' %}">Back to sign-in</a>
+      <p class="help" style="margin-top:1rem;">Each login is licensed per lab and per PC. To move your login to a new PC, ask Dynamic APAC to approve it.</p>
+    </div>
+  </div>
+</body>
+</html>
